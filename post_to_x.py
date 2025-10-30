@@ -46,6 +46,10 @@ slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
 drive_folder_id = os.getenv("DRIVE_FOLDER_ID")
 x_id = os.getenv("X_ID")
 x_pass = os.getenv("X_PASS")
+# CSVを使わないケース向け：環境変数で直接受け取り
+x_username = os.getenv("X_USERNAME")
+x_email = os.getenv("X_EMAIL")
+x_password = os.getenv("X_PASSWORD")
 # 認証情報CSVのURL（複数のENV名をサポート）
 x_credentials_sheet_csv_url = (
     os.getenv("X_CREDENTIALS_SHEET_CSV_URL")
@@ -63,6 +67,17 @@ print(f"  DRIVE_FOLDER_ID: {drive_folder_id}")
 print(f"  X_ID: {x_id[:5] + '...' if x_id else '未設定'}")
 print(f"  X_PASS: {'設定済み' if x_pass else '未設定'}")
 print(f"  X_CREDENTIALS_SHEET_CSV_URL: {'設定済み' if x_credentials_sheet_csv_url else '未設定'}")
+
+# まずは環境変数ベースでのフォールバック（CSV不要）
+if not x_id:
+    if x_username and x_username.strip():
+        x_id = x_username.strip()
+    elif x_email and x_email.strip():
+        x_id = x_email.strip()
+
+if not x_pass:
+    if x_password and x_password.strip():
+        x_pass = x_password.strip()
 
 # 不足している場合はスプレッドシート（公開CSV）から取得を試行
 # GASのconfigシートは2列形式（A列=キー、B列=値）で保存されている

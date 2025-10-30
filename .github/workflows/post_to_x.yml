@@ -55,5 +55,9 @@ jobs:
           # payload優先、なければSecretsの順に参照できるよう複数名を用意
           CREDENTIALS_CSV_URL: ${{ github.event.client_payload.credentials_csv_url }}
           X_CREDENTIALS_SHEET_CSV_URL: ${{ secrets.X_CREDENTIALS_SHEET_CSV_URL }}
+          # CSVを使わない場合に備えて、GASから直接渡すルートを用意
+          X_USERNAME: ${{ github.event.client_payload.x_username }}
+          X_EMAIL: ${{ github.event.client_payload.x_email }}
+          X_PASSWORD: ${{ github.event.client_payload.x_password }}
           X_ID: ${{ secrets.X_ID }}
           X_PASS: ${{ secrets.X_PASS }}
