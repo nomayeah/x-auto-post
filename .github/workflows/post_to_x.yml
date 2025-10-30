@@ -1,0 +1,26 @@
+name: X Auto Post
+on:
+  repository_dispatch:
+    types: [x_post_trigger]
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.10
+      - name: Install dependencies
+        run: pip install selenium requests
+      - name: Run bot
+        env:
+          TEXT: ${{ github.event.client_payload.text }}
+          FILE_ID: ${{ github.event.client_payload.file_id }}
+          SLACK_URL: ${{ github.event.client_payload.slack_url }}
+          X_USER: ${{ github.event.client_payload.x_user }}
+          X_PASS: ${{ github.event.client_payload.x_pass }}
+        run: python post_to_x.py
