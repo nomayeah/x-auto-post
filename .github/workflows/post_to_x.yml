@@ -1,4 +1,4 @@
-name: Post to X
+name: Post to X v2
 
 on:
   repository_dispatch:
