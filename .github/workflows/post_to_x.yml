@@ -49,5 +49,6 @@ jobs:
           IMAGE: ${{ github.event.client_payload.image }}
           SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
           DRIVE_FOLDER_ID: ${{ github.event.client_payload.drive_folder_id }}
+          X_CREDENTIALS_SHEET_CSV_URL: ${{ secrets.X_CREDENTIALS_SHEET_CSV_URL }}
           X_ID: ${{ secrets.X_ID }}
           X_PASS: ${{ secrets.X_PASS }}
