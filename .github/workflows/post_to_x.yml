@@ -1,26 +1,36 @@
-name: X Auto Post
+name: Post to X
+
 on:
   repository_dispatch:
-    types: [x_post_trigger]
+    types: [run-post]
 
 jobs:
   post:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v1
-      - name: Setup Python
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Chrome & Python
+        uses: browser-actions/setup-chrome@latest
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: 3.10
+          python-version: '3.11'
+
       - name: Install dependencies
-        run: pip install selenium requests
-      - name: Run bot
-        env:
-          TEXT: ${{ github.event.client_payload.text }}
-          FILE_ID: ${{ github.event.client_payload.file_id }}
-          SLACK_URL: ${{ github.event.client_payload.slack_url }}
-          X_USER: ${{ github.event.client_payload.x_user }}
-          X_PASS: ${{ github.event.client_payload.x_pass }}
+        run: pip install selenium slack_sdk webdriver-manager requests
+
+      - name: Run Selenium Post
         run: python post_to_x.py
+        env:
+          DATE: ${{ github.event.client_payload.date }}
+          TIME: ${{ github.event.client_payload.time }}
+          TEXT: ${{ github.event.client_payload.text }}
+          IMAGE: ${{ github.event.client_payload.image }}
+          SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
+          DRIVE_FOLDER_ID: ${{ github.event.client_payload.drive_folder_id }}
+          X_ID: ${{ secrets.X_ID }}
+          X_PASS: ${{ secrets.X_PASS }}
