@@ -46,7 +46,13 @@ slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
 drive_folder_id = os.getenv("DRIVE_FOLDER_ID")
 x_id = os.getenv("X_ID")
 x_pass = os.getenv("X_PASS")
-x_credentials_sheet_csv_url = os.getenv("X_CREDENTIALS_SHEET_CSV_URL")
+# 認証情報CSVのURL（複数のENV名をサポート）
+x_credentials_sheet_csv_url = (
+    os.getenv("X_CREDENTIALS_SHEET_CSV_URL")
+    or os.getenv("CREDENTIALS_CSV_URL")
+    or os.getenv("SHEET_CSV_URL")
+    or os.getenv("X_CSV_URL")
+)
 
 print(f"  DATE: {date}")
 print(f"  TIME: {time_str}")
@@ -63,7 +69,16 @@ print(f"  X_CREDENTIALS_SHEET_CSV_URL: {'設定済み' if x_credentials_sheet_cs
 if (not x_id or not x_pass) and x_credentials_sheet_csv_url:
     try:
         log_step(1, "スプレッドシートからX認証情報を取得中...")
-        resp = requests.get(x_credentials_sheet_csv_url, timeout=30)
+        # Google SheetsのフルURLが渡された場合はCSVエクスポートURLに変換
+        csv_url = x_credentials_sheet_csv_url
+        if "/spreadsheets/d/" in csv_url and "export?format=csv" not in csv_url and "gviz/tq" not in csv_url:
+            try:
+                sheet_id = csv_url.split("/spreadsheets/d/")[1].split("/")[0]
+                csv_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
+            except Exception:
+                pass
+
+        resp = requests.get(csv_url, timeout=30)
         if resp.status_code != 200:
             raise Exception(f"HTTP {resp.status_code}")
 
@@ -127,6 +142,8 @@ if (not x_id or not x_pass) and x_credentials_sheet_csv_url:
         print(error_msg)
         print(traceback.format_exc())
         log_step(1, error_msg, slack_webhook_url)
+elif not x_id or not x_pass:
+    log_step(1, "⚠️ X_ID/X_PASS が未設定で、CREDENTIALS CSV URL も未設定のため取得不可", slack_webhook_url)
 
 # 必須環境変数のチェック（詳細なエラー表示）
 missing_vars = []

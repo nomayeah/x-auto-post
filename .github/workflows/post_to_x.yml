@@ -52,6 +52,8 @@ jobs:
           IMAGE: ${{ github.event.client_payload.image }}
           SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
           DRIVE_FOLDER_ID: ${{ github.event.client_payload.drive_folder_id }}
+          # payload優先、なければSecretsの順に参照できるよう複数名を用意
+          CREDENTIALS_CSV_URL: ${{ github.event.client_payload.credentials_csv_url }}
           X_CREDENTIALS_SHEET_CSV_URL: ${{ secrets.X_CREDENTIALS_SHEET_CSV_URL }}
           X_ID: ${{ secrets.X_ID }}
           X_PASS: ${{ secrets.X_PASS }}
