@@ -21,9 +21,11 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
+        working-directory: ./x-auto-post
         run: pip install selenium slack_sdk webdriver-manager requests
 
       - name: Debug - Check client_payload
+        working-directory: ./x-auto-post
         run: |
           echo "=== GitHub Actions 受信データ確認 ==="
           echo ""
@@ -41,6 +43,7 @@ jobs:
           echo "※ X_ID と X_PASS は GitHub Secrets で設定されているか、Pythonスクリプトのエラーメッセージで確認してください"
 
       - name: Run Selenium Post
+        working-directory: ./x-auto-post
         run: python post_to_x.py
         env:
           DATE: ${{ github.event.client_payload.date }}
