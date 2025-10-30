@@ -59,6 +59,7 @@ print(f"  X_PASS: {'設定済み' if x_pass else '未設定'}")
 print(f"  X_CREDENTIALS_SHEET_CSV_URL: {'設定済み' if x_credentials_sheet_csv_url else '未設定'}")
 
 # 不足している場合はスプレッドシート（公開CSV）から取得を試行
+# GASのconfigシートは2列形式（A列=キー、B列=値）で保存されている
 if (not x_id or not x_pass) and x_credentials_sheet_csv_url:
     try:
         log_step(1, "スプレッドシートからX認証情報を取得中...")
@@ -66,32 +67,60 @@ if (not x_id or not x_pass) and x_credentials_sheet_csv_url:
         if resp.status_code != 200:
             raise Exception(f"HTTP {resp.status_code}")
 
-        reader = csv.DictReader(StringIO(resp.text))
+        # configシートの形式に対応（複数の形式に対応）
+        reader = csv.reader(StringIO(resp.text))
         key_to_value = {}
+        
+        # ヘッダー行をスキップ（ある場合）
+        first_row = next(reader, None)
+        if first_row and len(first_row) >= 2:
+            # ヘッダー行かどうか判定（"key", "value"などの文字列が含まれている場合）
+            is_header = any(h.lower() in ['key', 'name', '項目', '設定'] for h in first_row if isinstance(h, str))
+            if not is_header:
+                # ヘッダーでない場合は最初の行もデータとして扱う
+                key_to_value[first_row[0].strip()] = (first_row[1] if len(first_row) > 1 else "").strip()
+        
+        # 残りの行を処理
         for row in reader:
-            # 想定フォーマット: header に key,value もしくは name,secret 等
-            keys = [
-                ("key", "value"),
-                ("name", "value"),
-                ("name", "secret"),
-                ("項目", "値"),
-            ]
-            picked = None
-            for k, v in keys:
-                if k in row and v in row:
-                    picked = (row[k], row[v])
-                    break
-            if picked and picked[0]:
-                key_to_value[picked[0].strip()] = (picked[1] or "").strip()
+            if len(row) >= 2 and row[0] and row[0].strip():
+                key = row[0].strip()
+                value = (row[1] if len(row) > 1 else "").strip()
+                key_to_value[key] = value
 
-        x_id = x_id or key_to_value.get("X_ID") or key_to_value.get("X USER") or key_to_value.get("X_USER")
-        x_pass = x_pass or key_to_value.get("X_PASS") or key_to_value.get("X PASSWORD") or key_to_value.get("X_PASSWORD")
+        print(f"  スプレッドシートから取得したキー: {list(key_to_value.keys())}")
+
+        # X_IDの取得（複数のキー名パターンに対応）
+        if not x_id:
+            x_id_candidate = (key_to_value.get("X_ID") or 
+                             key_to_value.get("X_USER") or 
+                             key_to_value.get("X USER") or
+                             key_to_value.get("x_id") or
+                             key_to_value.get("x_user"))
+            if x_id_candidate:
+                x_id = str(x_id_candidate).strip()
+
+        # X_PASSの取得（複数のキー名パターンに対応）
+        if not x_pass:
+            x_pass_candidate = (key_to_value.get("X_PASS") or 
+                               key_to_value.get("X_PASSWORD") or 
+                               key_to_value.get("X PASSWORD") or
+                               key_to_value.get("x_pass") or
+                               key_to_value.get("x_password"))
+            if x_pass_candidate:
+                x_pass = str(x_pass_candidate).strip()
 
         print(f"  取得結果 X_ID: {x_id[:5] + '...' if x_id else '未取得'}")
         print(f"  取得結果 X_PASS: {'取得済み' if x_pass else '未取得'}")
-        log_step(1, "スプレッドシートからの取得完了")
+        
+        if x_id or x_pass:
+            log_step(1, "✅ スプレッドシートからの取得完了", slack_webhook_url)
+        else:
+            log_step(1, "⚠️ スプレッドシートにX_ID/X_PASSが見つかりませんでした", slack_webhook_url)
     except Exception as e:
-        print(f"⚠️ スプレッドシートからの認証情報取得に失敗: {e}")
+        error_msg = f"⚠️ スプレッドシートからの認証情報取得に失敗: {e}"
+        print(error_msg)
+        print(traceback.format_exc())
+        log_step(1, error_msg, slack_webhook_url)
 
 # 必須環境変数のチェック（詳細なエラー表示）
 missing_vars = []
