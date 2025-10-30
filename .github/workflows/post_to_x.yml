@@ -1,4 +1,4 @@
-name: Post to X v2
+name: Post to X
 
 on:
   repository_dispatch:
@@ -22,6 +22,23 @@ jobs:
 
       - name: Install dependencies
         run: pip install selenium slack_sdk webdriver-manager requests
+
+      - name: Debug - Check client_payload
+        run: |
+          echo "=== GitHub Actions 受信データ確認 ==="
+          echo ""
+          echo "client_payload の内容:"
+          echo '${{ toJSON(github.event.client_payload) }}'
+          echo ""
+          echo "各項目の有無 (詳細は上記JSONを参照):"
+          echo "  date: ${{ github.event.client_payload.date && 'あり' || 'なし' }}"
+          echo "  time: ${{ github.event.client_payload.time && 'あり' || 'なし' }}"
+          echo "  text: ${{ github.event.client_payload.text && 'あり' || 'なし' }}"
+          echo "  image: ${{ github.event.client_payload.image && 'あり' || 'なし' }}"
+          echo "  slack: ${{ github.event.client_payload.slack && 'あり' || 'なし' }}"
+          echo "  drive_folder_id: ${{ github.event.client_payload.drive_folder_id && 'あり' || 'なし' }}"
+          echo ""
+          echo "※ X_ID と X_PASS は GitHub Secrets で設定されているか、Pythonスクリプトのエラーメッセージで確認してください"
 
       - name: Run Selenium Post
         run: python post_to_x.py

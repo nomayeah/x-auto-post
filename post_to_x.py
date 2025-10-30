@@ -52,10 +52,43 @@ print(f"  IMAGE (file_id): {image}")
 print(f"  SLACK_WEBHOOK_URL: {'設定済み' if slack_webhook_url else '未設定'}")
 print(f"  DRIVE_FOLDER_ID: {drive_folder_id}")
 print(f"  X_ID: {x_id[:5] + '...' if x_id else '未設定'}")
+print(f"  X_PASS: {'設定済み' if x_pass else '未設定'}")
 
-if not all([date, time_str, text, image, x_id, x_pass]):
-    error_msg = "❌ 必須環境変数が不足しています"
+# 必須環境変数のチェック（詳細なエラー表示）
+missing_vars = []
+if not date:
+    missing_vars.append("DATE")
+if not time_str:
+    missing_vars.append("TIME")
+if not text:
+    missing_vars.append("TEXT")
+if not image:
+    missing_vars.append("IMAGE")
+if not x_id:
+    missing_vars.append("X_ID")
+if not x_pass:
+    missing_vars.append("X_PASS")
+
+if missing_vars:
+    error_msg = f"❌ 必須環境変数が不足しています: {', '.join(missing_vars)}"
     print(error_msg)
+    print("\n環境変数の詳細:")
+    print(f"  DATE: {'✓' if date else '✗'} {date if date else '(空または未設定)'}")
+    print(f"  TIME: {'✓' if time_str else '✗'} {time_str if time_str else '(空または未設定)'}")
+    print(f"  TEXT: {'✓' if text else '✗'} {text[:50] + '...' if text else '(空または未設定)'}")
+    print(f"  IMAGE: {'✓' if image else '✗'} {image if image else '(空または未設定)'}")
+    print(f"  X_ID: {'✓' if x_id else '✗'} {'設定済み' if x_id else '(GitHub Secretsで設定が必要)'}")
+    print(f"  X_PASS: {'✓' if x_pass else '✗'} {'設定済み' if x_pass else '(GitHub Secretsで設定が必要)'}")
+    
+    print("\n対処法:")
+    if "DATE" in missing_vars or "TIME" in missing_vars or "TEXT" in missing_vars or "IMAGE" in missing_vars:
+        print("  - GASコードの triggerGithubAction() で payload が正しく送信されているか確認")
+        print("  - スプレッドシートの postsシートにデータが正しく入力されているか確認")
+    if "X_ID" in missing_vars or "X_PASS" in missing_vars:
+        print("  - GitHubリポジトリの Settings > Secrets and variables > Actions で以下を設定:")
+        print("    - X_ID: X（旧Twitter）のユーザー名")
+        print("    - X_PASS: X（旧Twitter）のパスワード")
+    
     send_slack(error_msg, slack_webhook_url)
     exit(1)
 
