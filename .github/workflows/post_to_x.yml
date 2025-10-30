@@ -7,7 +7,6 @@ on:
 jobs:
   post:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -21,43 +20,15 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        working-directory: ./x-auto-post
         run: pip install selenium slack_sdk webdriver-manager requests
 
-      - name: Debug - Check client_payload
-        working-directory: ./x-auto-post
-        run: |
-          echo "=== GitHub Actions 受信データ確認 ==="
-          echo ""
-          echo "client_payload の内容:"
-          echo '${{ toJSON(github.event.client_payload) }}'
-          echo ""
-          echo "各項目の有無 (詳細は上記JSONを参照):"
-          echo "  date: ${{ github.event.client_payload.date && 'あり' || 'なし' }}"
-          echo "  time: ${{ github.event.client_payload.time && 'あり' || 'なし' }}"
-          echo "  text: ${{ github.event.client_payload.text && 'あり' || 'なし' }}"
-          echo "  image: ${{ github.event.client_payload.image && 'あり' || 'なし' }}"
-          echo "  slack: ${{ github.event.client_payload.slack && 'あり' || 'なし' }}"
-          echo "  drive_folder_id: ${{ github.event.client_payload.drive_folder_id && 'あり' || 'なし' }}"
-          echo ""
-          echo "※ X_ID と X_PASS は GitHub Secrets で設定されているか、Pythonスクリプトのエラーメッセージで確認してください"
-
       - name: Run Selenium Post
-        working-directory: ./x-auto-post
-        run: python post_to_x.py
         env:
-          DATE: ${{ github.event.client_payload.date }}
-          TIME: ${{ github.event.client_payload.time }}
           TEXT: ${{ github.event.client_payload.text }}
           IMAGE: ${{ github.event.client_payload.image }}
           SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
           DRIVE_FOLDER_ID: ${{ github.event.client_payload.drive_folder_id }}
-          # payload優先、なければSecretsの順に参照できるよう複数名を用意
-          CREDENTIALS_CSV_URL: ${{ github.event.client_payload.credentials_csv_url }}
-          X_CREDENTIALS_SHEET_CSV_URL: ${{ secrets.X_CREDENTIALS_SHEET_CSV_URL }}
-          # CSVを使わない場合に備えて、GASから直接渡すルートを用意
-          X_USERNAME: ${{ github.event.client_payload.x_username }}
-          X_EMAIL: ${{ github.event.client_payload.x_email }}
-          X_PASSWORD: ${{ github.event.client_payload.x_password }}
-          X_ID: ${{ secrets.X_ID }}
-          X_PASS: ${{ secrets.X_PASS }}
+          X_EMAIL: ${{ github.event.client_payload.X_EMAIL }}
+          X_USERNAME: ${{ github.event.client_payload.X_USERNAME }}
+          X_PASSWORD: ${{ github.event.client_payload.X_PASSWORD }}
+        run: python post_to_x.py
