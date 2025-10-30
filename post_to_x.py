@@ -94,6 +94,11 @@ if (not x_id or not x_pass) and x_credentials_sheet_csv_url:
             x_id_candidate = (key_to_value.get("X_ID") or 
                              key_to_value.get("X_USER") or 
                              key_to_value.get("X USER") or
+                             key_to_value.get("X_USERNAME") or
+                             key_to_value.get("X EMAIL") or
+                             key_to_value.get("X_EMAIL") or
+                             key_to_value.get("EMAIL") or
+                             key_to_value.get("USERNAME") or
                              key_to_value.get("x_id") or
                              key_to_value.get("x_user"))
             if x_id_candidate:
@@ -104,6 +109,7 @@ if (not x_id or not x_pass) and x_credentials_sheet_csv_url:
             x_pass_candidate = (key_to_value.get("X_PASS") or 
                                key_to_value.get("X_PASSWORD") or 
                                key_to_value.get("X PASSWORD") or
+                               key_to_value.get("PASSWORD") or
                                key_to_value.get("x_pass") or
                                key_to_value.get("x_password"))
             if x_pass_candidate:
