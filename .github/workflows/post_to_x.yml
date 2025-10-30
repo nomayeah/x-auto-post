@@ -1,26 +1,35 @@
-name: X Auto Post
+name: Post to X
+
 on:
   repository_dispatch:
-    types: [x_post_trigger]
+    types: [run-post]
 
 jobs:
   post:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Install Chrome
-        uses: browser-actions/setup-chrome@v1
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: 3.10
+          node-version: '20'
+
       - name: Install dependencies
-        run: pip install selenium requests
-      - name: Run bot
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Run Playwright Post
+        run: npm run post
         env:
           TEXT: ${{ github.event.client_payload.text }}
-          FILE_ID: ${{ github.event.client_payload.file_id }}
-          SLACK_URL: ${{ github.event.client_payload.slack_url }}
-          X_USER: ${{ github.event.client_payload.x_user }}
-          X_PASS: ${{ github.event.client_payload.x_pass }}
-        run: python post_to_x.py
+          IMAGE: ${{ github.event.client_payload.file_id }}
+          SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
+          DRIVE_FOLDER_ID: ${{ github.event.client_payload.drive_folder_id }}
+          X_EMAIL: ${{ github.event.client_payload.X_EMAIL }}
+          X_USERNAME: ${{ github.event.client_payload.X_USERNAME }}
+          X_PASSWORD: ${{ github.event.client_payload.X_PASSWORD }}

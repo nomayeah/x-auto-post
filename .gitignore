@@ -1,0 +1,35 @@
+# テスト用設定ファイル（機密情報を含むため）
+test_config.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# 一時ファイル
+*.jpg
+*.png
+error_screenshot_*.png
+/tmp/*.jpg
+/tmp/*.png
+
+# Cypress
+cypress/videos/
+cypress/screenshots/
+
+# 環境変数ファイル
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
