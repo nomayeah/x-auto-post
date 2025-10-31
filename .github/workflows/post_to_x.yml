@@ -7,6 +7,7 @@ on:
 jobs:
   post:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -23,12 +24,12 @@ jobs:
         run: pip install selenium slack_sdk webdriver-manager requests
 
       - name: Run Selenium Post
+        run: python post_to_x.py
         env:
           TEXT: ${{ github.event.client_payload.text }}
-          IMAGE: ${{ github.event.client_payload.image }}
+          IMAGE: ${{ github.event.client_payload.file_id }}
           SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
           DRIVE_FOLDER_ID: ${{ github.event.client_payload.drive_folder_id }}
           X_EMAIL: ${{ github.event.client_payload.X_EMAIL }}
           X_USERNAME: ${{ github.event.client_payload.X_USERNAME }}
           X_PASSWORD: ${{ github.event.client_payload.X_PASSWORD }}
-        run: python post_to_x.py
