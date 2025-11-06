@@ -721,6 +721,7 @@ async function postToX() {
         'button:has-text("次へ")',
         'button[role="button"]:has-text("次へ")',
         'button[type="button"]:has-text("次へ")',
+        'button[data-testid="ocfEnterTextNextButton"]',
         'span:has-text("次へ")',
         'div[role="button"]:has-text("次へ")',
         // 英語版のフォールバック
@@ -760,25 +761,25 @@ async function postToX() {
       }
       
       await sendSlack('📧 メールアドレス入力完了', slackWebhookUrl)
-      await page.waitForTimeout(3000)
-    } catch (error) {
-      console.error('❌ 「次へ」ボタンのクリックに失敗:', error.message)
-      await sendSlack(`❌ 「次へ」ボタンのクリックに失敗: ${error.message}`, slackWebhookUrl)
-      throw error
-    }
-    
-    // ユーザー名入力（スキップされる可能性がある）
-    console.log('👤 ユーザー名入力ステップを確認中...')
-    await page.waitForTimeout(2000) // ページ遷移の待機
-    
-    // ユーザー名入力フィールドが存在するか確認（短いタイムアウト）
-    const usernameInputExists = await page.locator('input[name="text"]').count().then(count => count > 0).catch(() => false)
-    
-    if (usernameInputExists) {
-      // ユーザー名入力フィールドが見つかった場合
-      console.log('👤 ユーザー名入力フィールドが見つかりました。ユーザー名を入力します')
-      try {
-        await page.waitForSelector('input[name="text"]', { timeout: 5000 })
+      
+      // ページ遷移を待機（最大30秒）
+      console.log('⏳ ページ遷移を待機中...')
+      await page.waitForTimeout(isCI ? 5000 : 3000) // ヘッドレスモードでは長めに待機
+      
+      // 次のステップに進んだかどうかを確認
+      // パスワード入力フィールドが表示されるか、ユーザー名入力フィールドが表示されるか、またはエラーメッセージが表示されるかを確認
+      const passwordFieldExists = await page.locator('input[name="password"], input[type="password"]').count().then(count => count > 0).catch(() => false)
+      const usernameFieldExists = await page.locator('input[name="text"]').count().then(count => count > 0).catch(() => false)
+      
+      if (passwordFieldExists) {
+        console.log('✅ パスワード入力フィールドが表示されました。ユーザー名入力はスキップされました。')
+        await sendSlack('✅ パスワード入力画面に遷移しました', slackWebhookUrl)
+      } else if (usernameFieldExists) {
+        console.log('👤 ユーザー名入力フィールドが表示されました。ユーザー名を入力します。')
+        await sendSlack('👤 ユーザー名入力画面に遷移しました', slackWebhookUrl)
+        
+        // ユーザー名入力
+        await page.waitForSelector('input[name="text"]', { timeout: 10000 })
         await page.fill('input[name="text"]', xUsername)
         await page.waitForTimeout(1000)
         
@@ -792,99 +793,112 @@ async function postToX() {
         let nextButtonClicked = false
         for (const selector of nextButtonSelectors) {
           try {
-            await page.waitForSelector(selector, { timeout: 3000 })
-            await page.click(selector)
-            console.log(`✅ 「次へ」ボタンをクリック: ${selector}`)
-            nextButtonClicked = true
-            break
+            await page.waitForSelector(selector, { timeout: 5000 })
+            const button = page.locator(selector).first()
+            const isDisabled = await button.getAttribute('disabled')
+            if (isDisabled === null) {
+              await button.click()
+              console.log(`✅ 「次へ」ボタンをクリック: ${selector}`)
+              nextButtonClicked = true
+              break
+            }
           } catch (e) {
             continue
           }
         }
         
         if (!nextButtonClicked) {
-          // フォールバック: Enterキーを送信
           console.log('⚠️ 「次へ」ボタンが見つからないため、Enterキーを送信')
           await page.keyboard.press('Enter')
         }
         
         await sendSlack('✅ ユーザー名入力完了', slackWebhookUrl)
-        await page.waitForTimeout(3000)
-      } catch (error) {
-        console.error('❌ ユーザー名入力に失敗:', error.message)
-        await sendSlack(`❌ ユーザー名入力に失敗: ${error.message}`, slackWebhookUrl)
-        throw error
+        await page.waitForTimeout(isCI ? 5000 : 3000) // パスワード入力画面への遷移を待機
+      } else {
+        console.log('⚠️ 次のステップに遷移していない可能性があります。追加の待機時間を設けます...')
+        await page.waitForTimeout(isCI ? 5000 : 3000)
       }
-    } else {
-      // ユーザー名入力フィールドが見つからなかった場合（スキップされた）
-      console.log('ℹ️ ユーザー名入力ステップはスキップされました。パスワード入力に進みます')
-      await sendSlack('ℹ️ ユーザー名入力ステップはスキップされました', slackWebhookUrl)
-      // ヘッドレスモードでは追加の待機時間が必要な場合がある
-      await page.waitForTimeout(isCI ? 5000 : 2000)
+    } catch (error) {
+      console.error('❌ 「次へ」ボタンのクリックに失敗:', error.message)
+      await sendSlack(`❌ 「次へ」ボタンのクリックに失敗: ${error.message}`, slackWebhookUrl)
+      throw error
     }
     
-    // パスワード入力モーダルを待機（より柔軟なセレクタと長めの待機時間）
-    console.log('🔍 パスワード入力モーダルを待機中...')
-    
-    // まず、ページの状態を確認
+    // パスワード入力フィールドを待機（最大60秒、段階的に待機）
+    console.log('🔍 パスワード入力フィールドを待機中...')
     console.log('📄 現在のURL:', page.url())
-    await page.waitForTimeout(isCI ? 3000 : 2000) // ヘッドレスモードでは追加の待機時間
     
-    // 複数のセレクタパターンを試行
-    const passwordModalSelectors = [
-      // 日本語版
-      'div[role="dialog"] h1:has-text("パスワード")',
-      'div[role="dialog"] h1:has-text("パスワードを入力")',
-      // 英語版
-      'div[role="dialog"] h1:has-text("Enter your password")',
-      'div[role="dialog"] h1:has-text("Password")',
-      // パスワード入力フィールド
-      'input[name="password"]',
-      'input[type="password"]',
-      // より一般的なパターン
-      'div[role="dialog"] input[name="password"]',
-      'div[role="dialog"] input[type="password"]'
-    ]
+    let passwordFieldFound = false
+    const maxWaitTime = 60000 // 最大60秒
+    const checkInterval = 2000 // 2秒ごとにチェック
+    const maxChecks = maxWaitTime / checkInterval
     
-    let passwordModalFound = false
-    let foundSelector = null
-    
-    for (const selector of passwordModalSelectors) {
-      try {
-        console.log(`🔍 セレクタを試行: ${selector}`)
-        await page.waitForSelector(selector, { timeout: 10000 })
-        const exists = await page.locator(selector).first().isVisible({ timeout: 2000 }).catch(() => false)
-        if (exists) {
-          console.log(`✅ パスワード入力モーダルを検出: ${selector}`)
-          passwordModalFound = true
-          foundSelector = selector
-          break
+    for (let i = 0; i < maxChecks; i++) {
+      await page.waitForTimeout(checkInterval)
+      
+      // パスワード入力フィールドを検索
+      const passwordSelectors = [
+        'input[name="password"]',
+        'input[type="password"]',
+        'div[role="dialog"] input[name="password"]',
+        'div[role="dialog"] input[type="password"]'
+      ]
+      
+      for (const selector of passwordSelectors) {
+        try {
+          const count = await page.locator(selector).count()
+          if (count > 0) {
+            const isVisible = await page.locator(selector).first().isVisible({ timeout: 1000 }).catch(() => false)
+            if (isVisible) {
+              console.log(`✅ パスワード入力フィールドを検出: ${selector}`)
+              passwordFieldFound = true
+              break
+            }
+          }
+        } catch (e) {
+          // 無視
         }
-      } catch (e) {
-        console.log(`⏭️ セレクタ失敗: ${selector} - ${e.message}`)
-        continue
+      }
+      
+      if (passwordFieldFound) {
+        break
+      }
+      
+      // デバッグ情報を出力（10秒ごと）
+      if (i % 5 === 0) {
+        console.log(`⏳ パスワード入力フィールドを待機中... (${(i + 1) * checkInterval / 1000}秒経過)`)
+        
+        // 現在のページの状態を確認
+        try {
+          const h1Text = await page.locator('h1').first().textContent().catch(() => '')
+          const inputCount = await page.locator('input').count().catch(() => 0)
+          console.log(`   h1テキスト: ${h1Text?.substring(0, 50)}...`)
+          console.log(`   input要素の数: ${inputCount}`)
+        } catch (e) {
+          // 無視
+        }
       }
     }
     
-    if (!passwordModalFound) {
+    if (!passwordFieldFound) {
       // デバッグ: ページの状態を確認
-      console.error('❌ パスワード入力モーダルの検出に失敗')
+      console.error('❌ パスワード入力フィールドの検出に失敗')
       console.error('📄 現在のURL:', page.url())
       
-      // ページ内のすべてのダイアログを確認
+      // ページ内のすべてのh1要素を確認
       try {
-        const dialogs = await page.locator('div[role="dialog"]').all()
-        console.log(`📋 見つかったダイアログの数: ${dialogs.length}`)
-        for (let i = 0; i < dialogs.length; i++) {
+        const h1Elements = await page.locator('h1').all()
+        console.log(`📋 見つかったh1要素の数: ${h1Elements.length}`)
+        for (let i = 0; i < h1Elements.length; i++) {
           try {
-            const dialogText = await dialogs[i].textContent()
-            console.log(`   ダイアログ${i + 1}: ${dialogText?.substring(0, 100)}...`)
+            const h1Text = await h1Elements[i].textContent()
+            console.log(`   h1[${i}]: ${h1Text?.substring(0, 100)}...`)
           } catch (e) {
-            console.log(`   ダイアログ${i + 1}: テキスト取得失敗`)
+            console.log(`   h1[${i}]: テキスト取得失敗`)
           }
         }
       } catch (e) {
-        console.log('⚠️ ダイアログの確認に失敗:', e.message)
+        console.log('⚠️ h1要素の確認に失敗:', e.message)
       }
       
       // すべてのinput要素を確認
@@ -895,7 +909,8 @@ async function postToX() {
           try {
             const inputType = await inputs[i].getAttribute('type')
             const inputName = await inputs[i].getAttribute('name')
-            console.log(`   input[${i}]: type="${inputType}", name="${inputName}"`)
+            const inputId = await inputs[i].getAttribute('id')
+            console.log(`   input[${i}]: type="${inputType}", name="${inputName}", id="${inputId}"`)
           } catch (e) {
             console.log(`   input[${i}]: 属性取得失敗`)
           }
@@ -912,11 +927,11 @@ async function postToX() {
         console.error('スクリーンショット保存失敗:', e.message)
       }
       
-      throw new Error('パスワード入力モーダルが見つかりません')
+      throw new Error('パスワード入力フィールドが見つかりません')
     }
     
-    console.log('✅ パスワード入力モーダルを検出')
-    await sendSlack('✅ パスワード入力モーダルを検出', slackWebhookUrl)
+    console.log('✅ パスワード入力フィールドを検出')
+    await sendSlack('✅ パスワード入力フィールドを検出', slackWebhookUrl)
     await page.waitForTimeout(2000)
     
     // パスワード入力
