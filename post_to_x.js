@@ -575,7 +575,7 @@ async function postToX() {
     throw new Error('configシートにX認証情報（X_EMAIL, X_USERNAME, X_PASSWORD）が設定されていません')
   }
   
-  await sendSlack('🚀 X投稿を開始', slackWebhookUrl)
+  await sendSlack('🚀 X投稿を開始 1', slackWebhookUrl)
   
   // postsシートから投稿データを取得
   // GitHub Actionsから渡されている場合は環境変数を使用、そうでなければスプレッドシートから取得
