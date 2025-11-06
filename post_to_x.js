@@ -620,53 +620,112 @@ async function postToX() {
   
   let browser = null
   try {
-    // ブラウザを起動
+    // ブラウザを起動（ヘッドレスモードでのボット検出回避を強化）
+    const launchArgs = [
+      '--disable-blink-features=AutomationControlled',
+      '--disable-dev-shm-usage',
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-site-isolation-trials',
+      '--disable-background-timer-throttling',
+      '--disable-backgrounding-occluded-windows',
+      '--disable-renderer-backgrounding',
+      '--disable-features=TranslateUI',
+      '--disable-ipc-flooding-protection',
+      '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
+    ]
+    
+    // ヘッドレスモードの場合、追加の引数を設定
+    if (headless) {
+      launchArgs.push('--headless=new') // 新しいヘッドレスモードを使用
+    }
+    
     browser = await chromium.launch({
       headless: headless,
-      args: [
-        '--disable-blink-features=AutomationControlled',
-        '--disable-dev-shm-usage',
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
-      ],
-      slowMo: headless ? 0 : 100
+      args: launchArgs,
+      slowMo: headless ? 50 : 100 // ヘッドレスモードでも少し遅延を入れる
     })
     
     const context = await browser.newContext({
       viewport: { width: 1280, height: 800 },
       userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
       locale: 'ja-JP',
-      timezoneId: 'Asia/Tokyo'
+      timezoneId: 'Asia/Tokyo',
+      // ヘッドレスモードでの検出回避のため、より多くの設定を追加
+      permissions: ['geolocation'],
+      geolocation: { latitude: 35.6762, longitude: 139.6503 }, // 東京の座標
+      colorScheme: 'dark' // Xのデフォルトテーマに合わせる
     })
     
-    // bot検出回避
+    // bot検出回避（より包括的に）
     await context.addInitScript(() => {
+      // navigator.webdriverを削除
       Object.defineProperty(navigator, 'webdriver', {
         get: () => undefined,
         configurable: true
       })
       
-      if (navigator.chrome) {
+      // navigator.chromeを偽装
+      if (!navigator.chrome) {
         Object.defineProperty(navigator, 'chrome', {
-          get: () => ({ runtime: {} }),
+          get: () => ({
+            runtime: {},
+            loadTimes: function() {},
+            csi: function() {},
+            app: {}
+          }),
           configurable: true
         })
       }
       
+      // navigator.pluginsを偽装
       Object.defineProperty(navigator, 'plugins', {
-        get: () => ({
-          length: 3,
-          item: () => null,
-          namedItem: () => null
-        }),
+        get: () => {
+          const plugins = []
+          for (let i = 0; i < 3; i++) {
+            plugins.push({
+              name: `Plugin ${i}`,
+              description: `Plugin ${i} description`,
+              filename: `plugin${i}.dll`,
+              length: 0
+            })
+          }
+          return plugins
+        },
         configurable: true
       })
       
+      // navigator.languagesを設定
       Object.defineProperty(navigator, 'languages', {
         get: () => ['ja-JP', 'ja', 'en-US', 'en'],
         configurable: true
       })
+      
+      // navigator.permissionsを偽装
+      const originalQuery = window.navigator.permissions.query
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission }) :
+          originalQuery(parameters)
+      )
+      
+      // window.chromeを偽装
+      window.chrome = {
+        runtime: {}
+      }
+      
+      // document.documentElementのwebdriver属性を削除
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => false,
+        configurable: true
+      })
+      
+      // WebDriverプロパティを削除
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Array
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Promise
+      delete window.cdc_adoQpoasnfa76pfcZLmcfl_Symbol
     })
     
     const page = await context.newPage()
@@ -707,11 +766,25 @@ async function postToX() {
       throw new Error(`ログインページの読み込みに失敗: ${error.message}`)
     }
     
-    // メールアドレス入力
+    // メールアドレス入力（ヘッドレスモードではより人間らしい動作）
     console.log('📧 メールアドレスを入力')
     await page.waitForSelector('input[name="text"]', { timeout: 20000 })
-    await page.fill('input[name="text"]', xEmail)
-    await page.waitForTimeout(1000)
+    
+    // ヘッドレスモードでは、より人間らしい入力方法を使用
+    if (headless) {
+      // フィールドをクリックしてから入力
+      await page.click('input[name="text"]')
+      await page.waitForTimeout(500 + Math.random() * 500) // ランダムな待機時間
+      
+      // 1文字ずつ入力（より人間らしい）
+      for (const char of xEmail) {
+        await page.keyboard.type(char, { delay: 50 + Math.random() * 50 })
+      }
+    } else {
+      await page.fill('input[name="text"]', xEmail)
+    }
+    
+    await page.waitForTimeout(headless ? 2000 : 1000) // ヘッドレスモードでは長めに待機
     
     // 「次へ」ボタンをクリック（日本語）
     console.log('🔘 「次へ」ボタンをクリック')
@@ -764,13 +837,15 @@ async function postToX() {
       
       // DOMの変化を待機（ページ遷移ではなく、同じページ内でコンテンツが切り替わる）
       console.log('⏳ DOMの変化を待機中...')
-      await page.waitForTimeout(2000) // クリック後の短い待機
+      // ヘッドレスモードでは、より長い待機時間を設ける（Xがボット検出している可能性があるため）
+      await page.waitForTimeout(headless ? 5000 : 2000) // クリック後の待機
       
       // h1テキストまたはinput要素の変化を監視して、次のステップを判定
       console.log('🔍 次のステップを判定中...')
       
       try {
-        // パスワード入力フィールドが表示されるか、h1テキストが「パスワード」に変わるのを待つ（最大30秒）
+        // パスワード入力フィールドが表示されるか、h1テキストが「パスワード」に変わるのを待つ（ヘッドレスモードでは長めに待機）
+        const waitTimeout = headless ? 60000 : 30000 // ヘッドレスモードでは60秒、GUIでは30秒
         await page.waitForFunction(
           () => {
             // パスワード入力フィールドが存在するか確認
@@ -790,7 +865,7 @@ async function postToX() {
             
             return false
           },
-          { timeout: 30000 }
+          { timeout: waitTimeout }
         )
         
         console.log('✅ パスワード入力画面が表示されました')
@@ -810,8 +885,22 @@ async function postToX() {
           
           // ユーザー名入力フィールドを待機
           await page.waitForSelector('input[name="text"]', { timeout: 10000 })
-          await page.fill('input[name="text"]', xUsername)
-          await page.waitForTimeout(1000)
+          
+          // ヘッドレスモードでは、より人間らしい入力方法を使用
+          if (headless) {
+            // フィールドをクリックしてから入力
+            await page.click('input[name="text"]')
+            await page.waitForTimeout(500 + Math.random() * 500) // ランダムな待機時間
+            
+            // 1文字ずつ入力（より人間らしい）
+            for (const char of xUsername) {
+              await page.keyboard.type(char, { delay: 50 + Math.random() * 50 })
+            }
+          } else {
+            await page.fill('input[name="text"]', xUsername)
+          }
+          
+          await page.waitForTimeout(headless ? 2000 : 1000) // ヘッドレスモードでは長めに待機
           
           // 「次へ」ボタンをクリック
           const nextButtonSelectors = [
@@ -843,10 +932,11 @@ async function postToX() {
           }
           
           await sendSlack('✅ ユーザー名入力完了', slackWebhookUrl)
-          await page.waitForTimeout(2000)
+          await page.waitForTimeout(headless ? 5000 : 2000) // ヘッドレスモードでは長めに待機
           
           // パスワード入力画面が表示されるのを待つ
           console.log('⏳ パスワード入力画面の表示を待機中...')
+          const waitTimeout2 = headless ? 60000 : 30000 // ヘッドレスモードでは60秒、GUIでは30秒
           await page.waitForFunction(
             () => {
               const passwordInput = document.querySelector('input[name="password"], input[type="password"]')
@@ -864,7 +954,7 @@ async function postToX() {
               
               return false
             },
-            { timeout: 30000 }
+            { timeout: waitTimeout2 }
           )
           
           console.log('✅ パスワード入力画面が表示されました')
