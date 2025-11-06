@@ -23,8 +23,17 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium
 
-      - name: Run Playwright Post
-        run: npm run post
+      - name: Install Xvfb (for GUI mode)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Run Playwright Post (with Xvfb)
+        run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1280x800x24 > /dev/null 2>&1 &
+          sleep 2
+          npm run post
         env:
           TEXT: ${{ github.event.client_payload.text }}
           IMAGE: ${{ github.event.client_payload.file_id }}

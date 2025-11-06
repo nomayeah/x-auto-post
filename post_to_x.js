@@ -575,7 +575,7 @@ async function postToX() {
     throw new Error('configシートにX認証情報（X_EMAIL, X_USERNAME, X_PASSWORD）が設定されていません')
   }
   
-  await sendSlack('🚀 X投稿を開始 1', slackWebhookUrl)
+  await sendSlack('🚀 X投稿を開始 2', slackWebhookUrl)
   
   // postsシートから投稿データを取得
   // GitHub Actionsから渡されている場合は環境変数を使用、そうでなければスプレッドシートから取得
@@ -612,10 +612,14 @@ async function postToX() {
     throw new Error('画像が指定されていません。投稿を中止します')
   }
   
-  // ヘッドレスモードの判定（GitHub Actionsの場合はheadless、ローカルの場合はGUI）
+  // ヘッドレスモードの判定（GitHub ActionsでもXvfbを使用するため、GUIモードで実行）
   const isCI = process.env.CI === 'true'
-  const headless = process.env.HEADLESS !== 'false' && isCI
+  // Xvfbが設定されている場合（DISPLAY環境変数が設定されている）はGUIモードで実行
+  const hasDisplay = !!process.env.DISPLAY
+  // ヘッドレスモードは、明示的にHEADLESS=trueが設定されている場合のみ
+  const headless = process.env.HEADLESS === 'true' && !hasDisplay
   console.log(`🖥️ 実行環境: ${isCI ? 'GitHub Actions (CI)' : 'ローカル'}`)
+  console.log(`🖥️ DISPLAY環境変数: ${process.env.DISPLAY || '未設定'}`)
   console.log(`🖥️ ヘッドレスモード: ${headless ? '有効' : '無効 (GUI)'}`)
   
   let browser = null
