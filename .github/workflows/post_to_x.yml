@@ -27,14 +27,43 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y xvfb
+          echo "✅ Xvfb installed"
 
       - name: Run Playwright Post (with Xvfb)
         run: |
           export DISPLAY=:99
-          Xvfb :99 -screen 0 1280x800x24 > /dev/null 2>&1 &
-          sleep 2
+          echo "🖥️ DISPLAY環境変数を設定: $DISPLAY"
+          
+          # Xvfbを起動
+          Xvfb :99 -screen 0 1280x800x24 > /tmp/xvfb.log 2>&1 &
+          XVFB_PID=$!
+          echo "🖥️ Xvfbを起動しました (PID: $XVFB_PID)"
+          
+          # Xvfbが起動するまで待機
+          sleep 3
+          
+          # Xvfbが起動しているか確認
+          if ps -p $XVFB_PID > /dev/null; then
+            echo "✅ Xvfbは正常に起動しています"
+          else
+            echo "❌ Xvfbの起動に失敗しました"
+            cat /tmp/xvfb.log
+            exit 1
+          fi
+          
+          # DISPLAY環境変数が設定されているか確認
+          echo "🖥️ DISPLAY環境変数: $DISPLAY"
+          
+          # xdpyinfoでXサーバーが動作しているか確認
+          xdpyinfo -display $DISPLAY > /dev/null 2>&1 && echo "✅ Xサーバーは正常に動作しています" || echo "⚠️ Xサーバーの確認に失敗しました"
+          
+          # npm run postを実行
           npm run post
+          
+          # クリーンアップ
+          kill $XVFB_PID 2>/dev/null || true
         env:
+          DISPLAY: :99
           TEXT: ${{ github.event.client_payload.text }}
           IMAGE: ${{ github.event.client_payload.file_id }}
           SLACK_WEBHOOK_URL: ${{ github.event.client_payload.slack }}
@@ -42,3 +71,4 @@ jobs:
           X_EMAIL: ${{ github.event.client_payload.X_EMAIL }}
           X_USERNAME: ${{ github.event.client_payload.X_USERNAME }}
           X_PASSWORD: ${{ github.event.client_payload.X_PASSWORD }}
+          CI: 'true'
