@@ -842,7 +842,65 @@ async function postToX() {
       // DOMの変化を待機（ページ遷移ではなく、同じページ内でコンテンツが切り替わる）
       console.log('⏳ DOMの変化を待機中...')
       // ヘッドレスモードでは、より長い待機時間を設ける（Xがボット検出している可能性があるため）
-      await page.waitForTimeout(headless ? 5000 : 2000) // クリック後の待機
+      await page.waitForTimeout(headless ? 5000 : 3000) // クリック後の待機
+      
+      // デバッグ: 現在のページの状態を確認
+      console.log('🔍 ページの状態を確認中...')
+      try {
+        const currentUrl = page.url()
+        console.log(`📄 現在のURL: ${currentUrl}`)
+        
+        // すべてのh1要素を確認
+        const h1Elements = await page.locator('h1').all()
+        console.log(`📋 見つかったh1要素の数: ${h1Elements.length}`)
+        for (let i = 0; i < h1Elements.length; i++) {
+          try {
+            const h1Text = await h1Elements[i].textContent()
+            console.log(`   h1[${i}]: ${h1Text?.substring(0, 100)}...`)
+          } catch (e) {
+            console.log(`   h1[${i}]: テキスト取得失敗`)
+          }
+        }
+        
+        // すべてのinput要素を確認
+        const inputs = await page.locator('input').all()
+        console.log(`📋 見つかったinput要素の数: ${inputs.length}`)
+        for (let i = 0; i < inputs.length; i++) {
+          try {
+            const inputType = await inputs[i].getAttribute('type')
+            const inputName = await inputs[i].getAttribute('name')
+            const inputValue = await inputs[i].inputValue().catch(() => '')
+            const isVisible = await inputs[i].isVisible().catch(() => false)
+            console.log(`   input[${i}]: type="${inputType}", name="${inputName}", value="${inputValue?.substring(0, 20)}...", visible=${isVisible}`)
+          } catch (e) {
+            console.log(`   input[${i}]: 属性取得失敗`)
+          }
+        }
+        
+        // エラーメッセージやアラートを確認
+        const errorMessages = await page.locator('div[role="alert"], div[data-testid="error"], span:has-text("エラー"), span:has-text("error")').all()
+        if (errorMessages.length > 0) {
+          console.log(`⚠️ 見つかったエラーメッセージの数: ${errorMessages.length}`)
+          for (let i = 0; i < errorMessages.length; i++) {
+            try {
+              const errorText = await errorMessages[i].textContent()
+              console.log(`   エラー[${i}]: ${errorText?.substring(0, 200)}...`)
+            } catch (e) {
+              console.log(`   エラー[${i}]: テキスト取得失敗`)
+            }
+          }
+        }
+        
+        // スクリーンショットを撮影（デバッグ用）
+        try {
+          await page.screenshot({ path: '/tmp/after_next_click.png', fullPage: true })
+          console.log('📸 スクリーンショットを保存: /tmp/after_next_click.png')
+        } catch (e) {
+          console.log('⚠️ スクリーンショット保存失敗:', e.message)
+        }
+      } catch (e) {
+        console.log('⚠️ ページ状態の確認に失敗:', e.message)
+      }
       
       // h1テキストまたはinput要素の変化を監視して、次のステップを判定
       console.log('🔍 次のステップを判定中...')
