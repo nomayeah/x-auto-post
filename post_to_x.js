@@ -878,16 +878,45 @@ async function postToX() {
         }
         
         // エラーメッセージやアラートを確認
-        const errorMessages = await page.locator('div[role="alert"], div[data-testid="error"], span:has-text("エラー"), span:has-text("error")').all()
+        const errorMessages = await page.locator('div[role="alert"], div[data-testid="error"], span:has-text("エラー"), span:has-text("error"), span:has-text("Could not"), span:has-text("could not")').all()
         if (errorMessages.length > 0) {
           console.log(`⚠️ 見つかったエラーメッセージの数: ${errorMessages.length}`)
+          let foundError = false
+          let errorText = ''
+          
           for (let i = 0; i < errorMessages.length; i++) {
             try {
-              const errorText = await errorMessages[i].textContent()
-              console.log(`   エラー[${i}]: ${errorText?.substring(0, 200)}...`)
+              const text = await errorMessages[i].textContent()
+              console.log(`   エラー[${i}]: ${text?.substring(0, 200)}...`)
+              
+              // 重要なエラーメッセージをチェック
+              const lowerText = text?.toLowerCase() || ''
+              if (lowerText.includes('could not log you in') || 
+                  lowerText.includes('try again later') ||
+                  lowerText.includes('ログインできません') ||
+                  lowerText.includes('一時的にログインできません')) {
+                foundError = true
+                errorText = text || ''
+              }
             } catch (e) {
               console.log(`   エラー[${i}]: テキスト取得失敗`)
             }
+          }
+          
+          // エラーメッセージが表示されている場合は、エラーをスロー
+          if (foundError) {
+            console.error(`❌ Xがログインを拒否しました: ${errorText}`)
+            await sendSlack(`❌ Xがログインを拒否しました: ${errorText}`, slackWebhookUrl)
+            
+            // スクリーンショットを撮影
+            try {
+              await page.screenshot({ path: '/tmp/login_error_detected.png', fullPage: true })
+              console.log('📸 スクリーンショットを保存: /tmp/login_error_detected.png')
+            } catch (e) {
+              console.log('⚠️ スクリーンショット保存失敗:', e.message)
+            }
+            
+            throw new Error(`Xがログインを拒否しました: ${errorText}. ボット検出されている可能性があります。しばらく時間を置いてから再試行してください。`)
           }
         }
         
@@ -899,6 +928,10 @@ async function postToX() {
           console.log('⚠️ スクリーンショット保存失敗:', e.message)
         }
       } catch (e) {
+        // エラーメッセージの検出でエラーが発生した場合は、それを再スロー
+        if (e.message.includes('Xがログインを拒否しました')) {
+          throw e
+        }
         console.log('⚠️ ページ状態の確認に失敗:', e.message)
       }
       
