@@ -1,3 +1,4 @@
+node_modules/
 # テスト用設定ファイル（機密情報を含むため）
 test_config.json
 
