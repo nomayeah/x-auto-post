@@ -45,6 +45,21 @@ const TOKENS = {
 
 // === ヘルパー関数 ===
 
+// デバッグ用: 環境変数の状態チェック（値そのものは出さない）
+function checkEnvVars() {
+    console.log('\n🔍 環境変数チェック:');
+    console.log(`X_API_KEY: ${APP_KEY ? '✅ OK (' + APP_KEY.length + ' chars)' : '❌ Missing'}`);
+    console.log(`X_API_SECRET: ${APP_SECRET ? '✅ OK (' + APP_SECRET.length + ' chars)' : '❌ Missing'}`);
+    
+    Object.keys(TOKENS).forEach(key => {
+        const t = TOKENS[key];
+        console.log(`Account ${key}:`);
+        console.log(`  Token: ${t.token ? '✅ OK (' + t.token.length + ' chars)' : '⚠️ Missing'}`);
+        console.log(`  Secret: ${t.secret ? '✅ OK (' + t.secret.length + ' chars)' : '⚠️ Missing'}`);
+    });
+    console.log('-------------------');
+}
+
 // Google認証クライアント取得
 function getGoogleAuth() {
     const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './service-account-key.json';
@@ -52,11 +67,15 @@ function getGoogleAuth() {
 
     if (serviceAccountJson) {
         // 環境変数からJSONを直接読み込む（GitHub Actions用）
-        const credentials = JSON.parse(serviceAccountJson);
-        return new google.auth.GoogleAuth({
-            credentials,
-            scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
-        });
+        try {
+            const credentials = JSON.parse(serviceAccountJson);
+            return new google.auth.GoogleAuth({
+                credentials,
+                scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
+            });
+        } catch (e) {
+            throw new Error(`GOOGLE_SERVICE_ACCOUNT_JSONのパースに失敗: ${e.message}`);
+        }
     } else if (fs.existsSync(serviceAccountKeyPath)) {
         // ファイルから読み込む（ローカル用）
         return new google.auth.GoogleAuth({
@@ -70,8 +89,13 @@ function getGoogleAuth() {
 // スプレッドシート取得 (CSV経由で軽量化)
 async function getSpreadsheetData() {
     const csvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
-    const response = await axios.get(csvUrl);
-    return parseCSV(response.data);
+    try {
+        const response = await axios.get(csvUrl);
+        return parseCSV(response.data);
+    } catch (e) {
+        console.error('Spreadsheet download failed:', e.message);
+        throw e;
+    }
 }
 
 // CSVパーサー
@@ -160,30 +184,48 @@ async function postTweet(accountKey, text, imagePath) {
     const token = TOKENS[accountKey];
     if (!token || !token.token) throw new Error(`アカウント設定が見つかりません: ${accountKey}`);
 
-    const client = new TwitterApi({
-        appKey: APP_KEY,
-        appSecret: APP_SECRET,
-        accessToken: token.token,
-        accessSecret: token.secret,
-    });
+    // 詳細エラーハンドリングを追加
+    try {
+        const client = new TwitterApi({
+            appKey: APP_KEY,
+            appSecret: APP_SECRET,
+            accessToken: token.token,
+            accessSecret: token.secret,
+        });
 
-    let mediaId = undefined;
-    if (imagePath) {
-        console.log('📤 画像アップロード中...');
-        mediaId = await client.v1.uploadMedia(imagePath);
+        let mediaId = undefined;
+        if (imagePath) {
+            console.log('📤 画像アップロード中...');
+            // v1 API for media upload
+            mediaId = await client.v1.uploadMedia(imagePath);
+        }
+
+        console.log(`📝 投稿中 (@${accountKey}): ${text.substring(0, 20)}...`);
+        
+        // v2 API for tweet
+        await client.v2.tweet({
+            text: text,
+            media: mediaId ? { media_ids: [mediaId] } : undefined
+        });
+    } catch (e) {
+        console.error(`❌ APIエラー詳細:`);
+        console.error(`   Message: ${e.message}`);
+        if (e.data) {
+            console.error(`   Data: ${JSON.stringify(e.data)}`);
+        }
+        if (e.code) {
+            console.error(`   Code: ${e.code}`);
+        }
+        throw e; // 上位に投げる
     }
-
-    console.log(`📝 投稿中 (@${accountKey}): ${text.substring(0, 20)}...`);
-    await client.v2.tweet({
-        text: text,
-        media: mediaId ? { media_ids: [mediaId] } : undefined
-    });
 }
 
 // === メイン処理 ===
 async function main() {
     const mode = process.argv[2] || 'check'; // check, test, force
     console.log(`🚀 開始: モード=${mode}`);
+    
+    checkEnvVars(); // 最初にチェック
 
     // 1. データ取得
     const rows = await getSpreadsheetData();
@@ -239,9 +281,8 @@ async function main() {
             if (status === '確認待ち') {
                 shouldPost = true;
                 targetAccount = 'TEST';
-                newStatus = '承認待ち'; // テスト後は承認待ちにする？あるいは手動？
-                // 要件: 「テストして問題なければ済にする」→ ここではステータスを変えない方が良いかもだが、
-                // ログに残すために「テスト済」などにすると親切。
+                // テスト後は承認待ちにする？
+                // newStatus = '承認待ち'; 
                 newStatus = '確認済み'; 
             }
         } else if (mode === 'force' && process.env.TARGET_ROW) {
@@ -283,4 +324,3 @@ async function main() {
 }
 
 main().catch(console.error);
-
