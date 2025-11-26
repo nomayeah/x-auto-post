@@ -1,0 +1,35 @@
+name: Manual Test Post
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Test Post
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN_A: ${{ secrets.X_ACCESS_TOKEN_A }}
+          X_ACCESS_SECRET_A: ${{ secrets.X_ACCESS_SECRET_A }}
+          X_ACCESS_TOKEN_B: ${{ secrets.X_ACCESS_TOKEN_B }}
+          X_ACCESS_SECRET_B: ${{ secrets.X_ACCESS_SECRET_B }}
+          X_ACCESS_TOKEN_TEST: ${{ secrets.X_ACCESS_TOKEN_TEST }}
+          X_ACCESS_SECRET_TEST: ${{ secrets.X_ACCESS_SECRET_TEST }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: npm run test-post
+
