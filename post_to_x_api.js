@@ -274,7 +274,7 @@ async function main() {
             if (status === '承認済み' && isPast) {
                 shouldPost = true;
                 // 本番アカウント (A or B)
-                targetAccount = (account === 'B' || account === '採用' || account === 'ロバミミ') ? 'B' : 'A';
+                targetAccount = (account === 'B' || account === 'ロバミミ') ? 'B' : 'A';
             }
         } else if (mode === 'test') {
             // テスト実行: 確認待ち のみ
@@ -290,7 +290,7 @@ async function main() {
             if (i + 1 == process.env.TARGET_ROW) {
                 shouldPost = true;
                 // 指定されたアカウントで
-                targetAccount = (account === 'B' || account === '採用') ? 'B' : 'A';
+                targetAccount = (account === 'B' || account === 'ロバミミ') ? 'B' : 'A';
             }
         }
 

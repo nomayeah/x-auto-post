@@ -880,7 +880,7 @@ async function main() {
             if (status === '承認済み' && isPast) {
                 shouldPost = true;
                 // 本番アカウント (A or B)
-                targetAccount = (account === 'B' || account === '採用' || account === 'ロバミミ') ? 'B' : 'A';
+                targetAccount = (account === 'B' || account === 'ロバミミ') ? 'B' : 'A';
             }
         } else if (mode === 'test') {
             // テスト実行: 確認待ち のみ
@@ -896,7 +896,7 @@ async function main() {
             if (i + 1 == process.env.TARGET_ROW) {
                 shouldPost = true;
                 // 指定されたアカウントで
-                targetAccount = (account === 'B' || account === '採用') ? 'B' : 'A';
+                targetAccount = (account === 'B' || account === 'ロバミミ') ? 'B' : 'A';
             }
         }
 
@@ -1306,7 +1306,7 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
           <p>スプレッドシートに投稿内容を入力します。</p>
           <ul>
             <li><strong>日付/時間</strong>: 投稿したい日時 (例: 2024/05/01 18:00)</li>
-            <li><strong>アカウント</strong>: チャプリ or ロバミミ or 採用</li>
+            <li><strong>アカウント</strong>: チャプリ or ロバミミ</li>
             <li><strong>テキスト</strong>: 投稿本文</li>
             <li><strong>画像</strong>: Step 1でコピーしたURL</li>
             <li><strong>ステータス</strong>: <strong style="color:#ef4444;">確認待ち</strong> を選択</li>
