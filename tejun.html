@@ -328,6 +328,7 @@
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('satchin')">👩‍💼 さっちん様用 (入力・申請)</button>
     <button class="tab-btn" onclick="showTab('engineer')">👨‍💻 エンジニア様用 (構築・設定)</button>
+    <button class="tab-btn" onclick="showTab('operation')">📝 運用マニュアル</button>
   </div>
 
   <!-- ==========================================
@@ -411,6 +412,18 @@
         <label>▼ スプレッドシートのURL</label>
         <input type="text" id="sheet_url" placeholder="https://docs.google.com/spreadsheets/d/..." data-required="スプレッドシートURL" />
       </div>
+
+      <h3>2. テストデータの入力</h3>
+      <p>動作確認のため、以下の内容で1行データを入力しておいてください。</p>
+      <table style="font-size:13px;">
+        <tr><th>項目</th><th>入力値</th></tr>
+        <tr><td>日付 / 時間</td><td>今日の日付 / 現在より前の時間</td></tr>
+        <tr><td>アカウント</td><td>任意の文字 (テスト時は無視されます)</td></tr>
+        <tr><td>テキスト</td><td>テスト投稿です #test</td></tr>
+        <tr><td>画像</td><td>Google Drive内の画像URL（共有リンク）</td></tr>
+        <tr><td>ステータス</td><td><strong>確認待ち</strong></td></tr>
+      </table>
+      <p class="note">※ステータスを「確認待ち」にしておくことで、エンジニアがテスト実行した際に、テスト用アカウントへ投稿されます。</p>
     </div>
 
     <!-- Phase 4: X Account -->
@@ -1248,7 +1261,8 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
     <div class="card">
       <span class="role-badge role-engineer">Step 3</span>
       <h2>動作確認 (Manual Test)</h2>
-      <p>設定が正しく完了したか、テスト実行を行って確認します。</p>
+      <p>設定が正しく完了したか、テスト実行を行って確認します。<br>
+      <small>※前提: スプレッドシートにステータス「<strong>確認待ち</strong>」のデータが1行以上あること。</small></p>
       
       <h3>1. テスト投稿の実行</h3>
       <ol>
@@ -1266,6 +1280,89 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
     </div>
 
   </div><!-- End engineer tab -->
+
+  <!-- ==========================================
+       運用マニュアルタブ
+       ========================================== -->
+  <div id="tab-operation" class="tab-content">
+    
+    <div class="card">
+      <span class="role-badge role-satchin">Routine</span>
+      <h2>日常の投稿フロー</h2>
+      <p>Bot運用開始後の、日々の投稿手順です。</p>
+
+      <div style="display:flex; flex-direction:column; gap:16px; margin-top:20px;">
+        
+        <!-- Step 1 -->
+        <div style="border:1px solid #e2e8f0; border-radius:8px; padding:16px; background:white;">
+          <h3 style="margin-top:0; font-size:16px; border-color:#3b82f6;">Step 1: 準備 (画像のアップロード)</h3>
+          <p>投稿したい画像をGoogle Driveの「X投稿用画像」フォルダにアップロードします。<br>
+          アップロード後、画像を右クリックして「リンクを取得」し、URLをコピーしておきます。</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="border:1px solid #e2e8f0; border-radius:8px; padding:16px; background:white;">
+          <h3 style="margin-top:0; font-size:16px; border-color:#3b82f6;">Step 2: シートへの入力</h3>
+          <p>スプレッドシートに投稿内容を入力します。</p>
+          <ul>
+            <li><strong>日付/時間</strong>: 投稿したい日時 (例: 2024/05/01 18:00)</li>
+            <li><strong>アカウント</strong>: チャプリ or ロバミミ or 採用</li>
+            <li><strong>テキスト</strong>: 投稿本文</li>
+            <li><strong>画像</strong>: Step 1でコピーしたURL</li>
+            <li><strong>ステータス</strong>: <strong style="color:#ef4444;">確認待ち</strong> を選択</li>
+          </ul>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="border:1px solid #e2e8f0; border-radius:8px; padding:16px; background:white;">
+          <h3 style="margin-top:0; font-size:16px; border-color:#3b82f6;">Step 3: テスト投稿と確認</h3>
+          <p>エンジニアに「テスト実行」を依頼するか、Botの自動テストを待ちます。</p>
+          <ul>
+            <li>Botがテスト用アカウントに投稿を行います。</li>
+            <li>投稿が成功すると、シートのステータスが自動的に <strong style="color:#f59e0b;">確認済み</strong> に変わります。</li>
+            <li>実際のX（テスト垢）を見て、画像や改行が正しいか確認してください。</li>
+          </ul>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="border:1px solid #e2e8f0; border-radius:8px; padding:16px; background:white;">
+          <h3 style="margin-top:0; font-size:16px; border-color:#3b82f6;">Step 4: 承認 (Goサイン)</h3>
+          <p>内容に問題がなければ、シートのステータスを手動で <strong style="color:#10b981;">承認済み</strong> に変更してください。</p>
+          <p class="note">※ これで予約完了です。指定時間になるとBotが本番投稿します。</p>
+        </div>
+
+        <!-- Step 5 -->
+        <div style="border:1px solid #e2e8f0; border-radius:8px; padding:16px; background:white;">
+          <h3 style="margin-top:0; font-size:16px; border-color:#3b82f6;">Step 5: 完了確認</h3>
+          <p>本番投稿が成功すると、ステータスが自動的に <strong style="color:#64748b;">完了</strong> に変わります。</p>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <span class="role-badge role-satchin">Trouble Shooting</span>
+      <h2>よくある質問・トラブル対応</h2>
+      
+      <details>
+        <summary style="font-weight:bold; cursor:pointer;">Q. 投稿をキャンセルしたい</summary>
+        <p>ステータスを「承認済み」から空欄、または「キャンセル」等に変更してください。<br>
+        「承認済み」でなければ、時間は過ぎても投稿されません。</p>
+      </details>
+
+      <details style="margin-top:12px;">
+        <summary style="font-weight:bold; cursor:pointer;">Q. 画像なしで投稿したい</summary>
+        <p>「画像」列を空欄にすれば、テキストのみで投稿されます。</p>
+      </details>
+
+      <details style="margin-top:12px;">
+        <summary style="font-weight:bold; cursor:pointer;">Q. 投稿に失敗した（完了にならない）</summary>
+        <p>時間が過ぎても「完了」にならない場合、何らかのエラーが発生しています。<br>
+        エンジニアに連絡し、GitHubのログを確認してもらってください。</p>
+      </details>
+    </div>
+
+  </div><!-- End operation tab -->
 
   <!-- ステータスバー -->
   <div id="status_bar" class="status-bar">
@@ -1303,8 +1400,11 @@ function showTab(role) {
   if(role === 'satchin') {
     btns[0].classList.add('active');
     document.getElementById('status_bar').classList.add('visible');
-  } else {
+  } else if (role === 'engineer') {
     btns[1].classList.add('active');
+    document.getElementById('status_bar').classList.remove('visible');
+  } else {
+    btns[2].classList.add('active');
     document.getElementById('status_bar').classList.remove('visible');
   }
 }
