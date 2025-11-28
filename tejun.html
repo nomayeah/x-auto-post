@@ -591,13 +591,437 @@ x-auto-post/
 
         <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
           <summary style="cursor:pointer; font-weight:bold;">📄 post_to_x_api.js (メイン処理)</summary>
-          <pre><code>// ここに post_to_x_api.js の内容をコピペしてください
-// (ファイル数が多いのでリポジトリから取得推奨ですが、必要ならここに全コード載せます)</code></pre>
+          <pre><code>/**
+ * X APIを使用した自動投稿スクリプト
+ * 
+ * 機能:
+ * 1. スプレッドシートから投稿データを取得
+ * 2. アカウント（A/B/Test）を切り替えて投稿
+ * 3. 画像をDriveからダウンロードして添付
+ * 4. 投稿結果をスプレッドシートに書き込み
+ */
+
+require('dotenv').config();
+const { TwitterApi } = require('twitter-api-v2');
+const { google } = require('googleapis');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+const { promisify } = require('util');
+const writeFile = promisify(fs.writeFile);
+const unlink = promisify(fs.unlink);
+
+// === 設定 ===
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1O9pWwkMvVBQOngRSLumogXFktAHmAmur65t5Kwpxe4Y';
+const SHEET_NAME = 'posts';
+
+// === 認証情報 ===
+// 共通のAPI Key
+const APP_KEY = process.env.X_API_KEY;
+const APP_SECRET = process.env.X_API_SECRET;
+
+// アカウントごとのトークン
+const TOKENS = {
+    'A': {
+        token: process.env.X_ACCESS_TOKEN_A,
+        secret: process.env.X_ACCESS_SECRET_A
+    },
+    'B': {
+        token: process.env.X_ACCESS_TOKEN_B,
+        secret: process.env.X_ACCESS_SECRET_B
+    },
+    'TEST': {
+        token: process.env.X_ACCESS_TOKEN_TEST,
+        secret: process.env.X_ACCESS_SECRET_TEST
+    }
+};
+
+// === ヘルパー関数 ===
+
+// デバッグ用: 環境変数の状態チェック（値そのものは出さない）
+function checkEnvVars() {
+    console.log('\n🔍 環境変数チェック:');
+    console.log(`X_API_KEY: ${APP_KEY ? '✅ OK (' + APP_KEY.length + ' chars)' : '❌ Missing'}`);
+    console.log(`X_API_SECRET: ${APP_SECRET ? '✅ OK (' + APP_SECRET.length + ' chars)' : '❌ Missing'}`);
+    
+    Object.keys(TOKENS).forEach(key => {
+        const t = TOKENS[key];
+        console.log(`Account ${key}:`);
+        console.log(`  Token: ${t.token ? '✅ OK (' + t.token.length + ' chars)' : '⚠️ Missing'}`);
+        console.log(`  Secret: ${t.secret ? '✅ OK (' + t.secret.length + ' chars)' : '⚠️ Missing'}`);
+    });
+    console.log('-------------------');
+}
+
+// Google認証クライアント取得
+function getGoogleAuth() {
+    const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './service-account-key.json';
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+
+    if (serviceAccountJson) {
+        // 環境変数からJSONを直接読み込む（GitHub Actions用）
+        try {
+            const credentials = JSON.parse(serviceAccountJson);
+            return new google.auth.GoogleAuth({
+                credentials,
+                scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
+            });
+        } catch (e) {
+            throw new Error(`GOOGLE_SERVICE_ACCOUNT_JSONのパースに失敗: ${e.message}`);
+        }
+    } else if (fs.existsSync(serviceAccountKeyPath)) {
+        // ファイルから読み込む（ローカル用）
+        return new google.auth.GoogleAuth({
+            keyFile: serviceAccountKeyPath,
+            scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
+        });
+    }
+    throw new Error('Google Service Accountの設定が見つかりません');
+}
+
+// スプレッドシート取得 (CSV経由で軽量化)
+async function getSpreadsheetData() {
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
+    try {
+        const response = await axios.get(csvUrl);
+        return parseCSV(response.data);
+    } catch (e) {
+        console.error('Spreadsheet download failed:', e.message);
+        throw e;
+    }
+}
+
+// CSVパーサー
+function parseCSV(csvText) {
+    const rows = [];
+    let currentRow = [];
+    let currentValue = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < csvText.length; i++) {
+        const char = csvText[i];
+        if (char === '"') {
+            if (inQuotes && csvText[i + 1] === '"') {
+                currentValue += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            currentRow.push(currentValue);
+            currentValue = '';
+        } else if ((char === '\r' || char === '\n') && !inQuotes) {
+            if (char === '\r' && csvText[i + 1] === '\n') i++;
+            currentRow.push(currentValue);
+            if (currentRow.some(v => v)) rows.push(currentRow);
+            currentRow = [];
+            currentValue = '';
+        } else {
+            currentValue += char;
+        }
+    }
+    if (currentValue || currentRow.length) {
+        currentRow.push(currentValue);
+        rows.push(currentRow);
+    }
+    return rows;
+}
+
+// Google Driveから画像ダウンロード
+async function downloadImage(fileIdOrUrl) {
+    if (!fileIdOrUrl) return null;
+    
+    // ID抽出
+    let fileId = fileIdOrUrl;
+    const match = fileIdOrUrl.match(/[-\w]{25,}/);
+    if (match) fileId = match[0];
+
+    console.log(`📥 画像ダウンロード: ${fileId}`);
+    const url = `https://drive.google.com/uc?export=download&id=${fileId}`;
+    
+    try {
+        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const tempPath = path.join('/tmp', `${fileId}.jpg`);
+        await writeFile(tempPath, response.data);
+        return tempPath;
+    } catch (e) {
+        console.error(`❌ 画像ダウンロード失敗: ${e.message}`);
+        return null;
+    }
+}
+
+// スプレッドシート更新
+async function updateSheetStatus(rowIndex, statusColumnIndex, newStatus) {
+    try {
+        const auth = getGoogleAuth();
+        const sheets = google.sheets({ version: 'v4', auth });
+        
+        // カラム番号をA1記法に変換 (0 -> A, 4 -> E)
+        const colLetter = String.fromCharCode(65 + statusColumnIndex);
+        const range = `${SHEET_NAME}!${colLetter}${rowIndex + 1}`; // rowIndexは0始まり、シートは1始まり
+
+        await sheets.spreadsheets.values.update({
+            spreadsheetId: SPREADSHEET_ID,
+            range: range,
+            valueInputOption: 'RAW',
+            resource: { values: [[newStatus]] }
+        });
+        console.log(`✅ シート更新: 行${rowIndex + 1} -> ${newStatus}`);
+    } catch (e) {
+        console.error(`❌ シート更新失敗: ${e.message}`);
+    }
+}
+
+// Xに投稿
+async function postTweet(accountKey, text, imagePath) {
+    const token = TOKENS[accountKey];
+    if (!token || !token.token) throw new Error(`アカウント設定が見つかりません: ${accountKey}`);
+
+    // 詳細エラーハンドリングを追加
+    try {
+        const client = new TwitterApi({
+            appKey: APP_KEY,
+            appSecret: APP_SECRET,
+            accessToken: token.token,
+            accessSecret: token.secret,
+        });
+
+        let mediaId = undefined;
+        if (imagePath) {
+            console.log('📤 画像アップロード中...');
+            // v1 API for media upload
+            mediaId = await client.v1.uploadMedia(imagePath);
+        }
+
+        console.log(`📝 投稿中 (@${accountKey}): ${text.substring(0, 20)}...`);
+        
+        // v2 API for tweet
+        await client.v2.tweet({
+            text: text,
+            media: mediaId ? { media_ids: [mediaId] } : undefined
+        });
+    } catch (e) {
+        console.error(`❌ APIエラー詳細:`);
+        console.error(`   Message: ${e.message}`);
+        if (e.data) {
+            console.error(`   Data: ${JSON.stringify(e.data)}`);
+        }
+        if (e.code) {
+            console.error(`   Code: ${e.code}`);
+        }
+        throw e; // 上位に投げる
+    }
+}
+
+// === メイン処理 ===
+async function main() {
+    const mode = process.argv[2] || 'check'; // check, test, force
+    console.log(`🚀 開始: モード=${mode}`);
+    
+    checkEnvVars(); // 最初にチェック
+
+    // 1. データ取得
+    const rows = await getSpreadsheetData();
+    if (rows.length &lt; 2) {
+        console.log('データがありません');
+        return;
+    }
+
+    // ヘッダー解析
+    const headers = rows[0];
+    const colMap = {
+        date: headers.indexOf('日付'),
+        time: headers.indexOf('時間'),
+        account: headers.indexOf('アカウント'),
+        text: headers.indexOf('テキスト'),
+        image: headers.indexOf('画像'),
+        status: headers.indexOf('ステータス')
+    };
+
+    if (colMap.date === -1 || colMap.status === -1) {
+        throw new Error('必須カラム（日付, ステータス等）が見つかりません');
+    }
+
+    const now = new Date();
+
+    // 2. 行ごとの処理
+    for (let i = 1; i &lt; rows.length; i++) {
+        const row = rows[i];
+        const dateStr = row[colMap.date];
+        const timeStr = row[colMap.time];
+        const account = row[colMap.account] || 'A'; // デフォルトA
+        const text = row[colMap.text];
+        const image = row[colMap.image];
+        const status = row[colMap.status] || '';
+
+        // 日時パース
+        const postTime = new Date(`${dateStr.replace(/\//g, '-')} ${timeStr}`);
+        const isPast = postTime &lt;= now;
+
+        let shouldPost = false;
+        let targetAccount = account;
+        let newStatus = '完了';
+
+        if (mode === 'check') {
+            // 定期実行: 承認済み かつ 時間経過 かつ 未完了
+            if (status === '承認済み' && isPast) {
+                shouldPost = true;
+                // 本番アカウント (A or B)
+                targetAccount = (account === 'B' || account === '採用' || account === 'ロバミミ') ? 'B' : 'A';
+            }
+        } else if (mode === 'test') {
+            // テスト実行: 確認待ち のみ
+            if (status === '確認待ち') {
+                shouldPost = true;
+                targetAccount = 'TEST';
+                // テスト後は承認待ちにする？
+                // newStatus = '承認待ち'; 
+                newStatus = '確認済み'; 
+            }
+        } else if (mode === 'force' && process.env.TARGET_ROW) {
+            // 強制実行: 行指定
+            if (i + 1 == process.env.TARGET_ROW) {
+                shouldPost = true;
+                // 指定されたアカウントで
+                targetAccount = (account === 'B' || account === '採用') ? 'B' : 'A';
+            }
+        }
+
+        if (shouldPost) {
+            console.log(`\n🎯 対象行: ${i + 1} (Account: ${targetAccount})`);
+            
+            try {
+                // 画像DL
+                let imagePath = null;
+                if (image) {
+                    imagePath = await downloadImage(image);
+                }
+
+                // 投稿
+                await postTweet(targetAccount, text, imagePath);
+                console.log('✅ 投稿成功');
+
+                // ステータス更新
+                await updateSheetStatus(i, colMap.status, newStatus);
+
+                // 後始末
+                if (imagePath) await unlink(imagePath);
+
+            } catch (e) {
+                console.error(`❌ 処理失敗: ${e.message}`);
+                // エラーをシートに書き込む？
+            }
+        }
+    }
+    console.log('🏁 完了');
+}
+
+main().catch(console.error);</code></pre>
         </details>
         
         <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
           <summary style="cursor:pointer; font-weight:bold;">📄 get_twitter_tokens.js (トークン取得用)</summary>
-          <pre><code>// ここに get_twitter_tokens.js の内容をコピペしてください</code></pre>
+          <pre><code>const { TwitterApi } = require('twitter-api-v2');
+const readline = require('readline');
+const { exec } = require('child_process');
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout
+});
+
+const ask = (question) => new Promise((resolve) => rl.question(question, resolve));
+
+(async () => {
+    console.log('\n=== X (Twitter) アカウント認証ツール (デバッグ版) ===');
+    console.log('Developer Portalで取得した API Key と API Key Secret を入力してください。');
+    console.log('---------------------------------------------------');
+
+    const apiKey = await ask('API Key: ');
+    const apiSecret = await ask('API Key Secret: ');
+
+    if (!apiKey || !apiSecret) {
+        console.error('❌ API Key または Secret が入力されていません。');
+        process.exit(1);
+    }
+
+    const client = new TwitterApi({
+        appKey: apiKey,
+        appSecret: apiSecret,
+    });
+
+    const callbackUrl = 'http://127.0.0.1:3000/callback';
+    let authLink;
+    try {
+        authLink = await client.generateAuthLink(callbackUrl, { linkMode: 'authorize' });
+        console.log('\nDEBUG: Auth Link generated successfully.');
+        console.log('Token:', authLink.oauth_token);
+        console.log('Secret:', authLink.oauth_token_secret);
+    } catch (e) {
+        console.error('\n❌ 認証リンク生成失敗');
+        if (e.data) {
+            console.error('API Error Data:', JSON.stringify(e.data, null, 2));
+        } else {
+            console.error('Error:', e);
+        }
+        process.exit(1);
+    }
+
+    console.log('\n=== 認証手順 ===');
+    console.log('1. 自動的にブラウザが開きます');
+    console.log(`   URL: ${authLink.url}`);
+    console.log('---------------------------------------------------');
+
+    const startCommand = process.platform == 'darwin' ? 'open' : process.platform == 'win32' ? 'start' : 'xdg-open';
+    exec(`${startCommand} "${authLink.url}"`);
+
+    const verifier = await ask('\nコピーした oauth_verifier を貼り付けてEnter: ');
+
+    if (!verifier) {
+        console.error('❌ Verifierが入力されませんでした。');
+        process.exit(1);
+    }
+
+    try {
+        // 詳細なログ出力のためにloginメソッドの中身を分解して実行
+        // v1.login() は内部で getAccessToken を呼んでいる
+        console.log('\nDEBUG: トークン交換を開始します...');
+        console.log(`Oauth Token: ${authLink.oauth_token}`);
+        console.log(`Verifier: ${verifier}`);
+
+        // 一時的なクライアントを作成して認証
+        const tempClient = new TwitterApi({
+            appKey: apiKey,
+            appSecret: apiSecret,
+            accessToken: authLink.oauth_token,
+            accessSecret: authLink.oauth_token_secret,
+        });
+
+        const { accessToken, accessSecret, screenName, userId } = await tempClient.login(verifier);
+
+        console.log('\n✅ 認証成功！以下の情報をGitHub Secretsに登録してください。');
+        console.log('===================================================');
+        console.log(`アカウント名: @${screenName} (ID: ${userId})`);
+        console.log(`Access Token:        ${accessToken}`);
+        console.log(`Access Token Secret: ${accessSecret}`);
+        console.log('===================================================');
+        
+        process.exit(0);
+    } catch (e) {
+        console.error('\n❌ トークン交換エラー詳細:');
+        console.error('---------------------------------------------------');
+        console.error('Message:', e.message);
+        console.error('Code:', e.code);
+        if (e.data) {
+            console.error('API Response Data:', JSON.stringify(e.data, null, 2));
+        }
+        if (e.rateLimit) {
+            console.error('Rate Limit Info:', e.rateLimit);
+        }
+        console.error('---------------------------------------------------');
+        process.exit(1);
+    }
+})();</code></pre>
         </details>
 
         <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
@@ -718,10 +1142,27 @@ git push -u origin main</code></pre>
       <div style="margin-top:24px;">
         <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">① チャプリ の設定</h4>
         <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>ブラウザで <strong>チャプリのアカウント</strong> にログインします。</li>
-          <li><code>npm run get-tokens</code> を実行し、認証してトークンを取得します。</li>
-          <li>表示された <strong>Access Token</strong> と <strong>Secret</strong> を以下に入力してください。</li>
+          <li>Chrome等の <strong>シークレットウィンドウ</strong> を開き、<strong>チャプリのアカウント</strong> にログインします。</li>
+          <li>ターミナルで <code>npm run get-tokens</code> を実行し、以下の流れでトークンを取得します。</li>
+          <li>最後に表示された <strong>Access Token</strong> と <strong>Secret</strong> を下の欄に入力してください。</li>
         </ol>
+        
+        <pre style="margin-bottom:8px; font-size:12px; line-height:1.3; background:#1e293b; color:#cbd5e1; padding:12px; border-radius:6px;">$ npm run get-tokens
+
+=== X (Twitter) アカウント認証ツール ===
+API Key: <span style="color:#4ade80;">(引継ぎデータの X_API_KEY を貼り付け)</span>
+API Key Secret: <span style="color:#4ade80;">(引継ぎデータの X_API_SECRET を貼り付け)</span>
+
+URL: https://api.x.com/...
+<span style="color:#fcd34d;">(↑ このURLがブラウザで開きます。連携アプリを許可してください)</span>
+<span style="color:#fcd34d;">(「サイトにアクセスできません」等の画面になったら、URLバーから `oauth_verifier` をコピー)</span>
+
+コピーした oauth_verifier を貼り付けてEnter: <span style="color:#4ade80;">(コピーした値を貼り付け)</span>
+
+✅ 認証成功！
+Access Token:        <span style="color:#4ade80;">123456...</span>  <-- これをコピー
+Access Token Secret: <span style="color:#4ade80;">abcdef...</span>  <-- これをコピー</pre>
+
         <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
           <label>▼ チャプリ Token / Secret</label>
           <div class="secret-val-wrap">
@@ -734,10 +1175,21 @@ git push -u origin main</code></pre>
       <div style="margin-top:24px;">
         <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">② ロバミミ の設定</h4>
         <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>ブラウザで <strong>ロバミミのアカウント</strong> に切り替えます（ログアウトしてログイン）。</li>
-          <li>再度 <code>npm run get-tokens</code> を実行し、認証します。</li>
+          <li>一度ブラウザを閉じ、<strong>新しいシークレットウィンドウ</strong> を開いて <strong>ロバミミのアカウント</strong> にログインします。</li>
+          <li>再度 <code>npm run get-tokens</code> を実行し、同様に認証を行います。</li>
           <li>表示されたトークンを以下に入力してください。</li>
         </ol>
+
+        <pre style="margin-bottom:8px; font-size:12px; line-height:1.3; background:#1e293b; color:#cbd5e1; padding:12px; border-radius:6px;">$ npm run get-tokens
+...
+API Key: <span style="color:#4ade80;">(同じKeyを使用)</span>
+API Key Secret: <span style="color:#4ade80;">(同じSecretを使用)</span>
+...
+(ロバミミのアカウントで認証)
+...
+Access Token:        <span style="color:#4ade80;">987654...</span>
+Access Token Secret: <span style="color:#4ade80;">zyxwvu...</span></pre>
+
         <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
           <label>▼ ロバミミ Token / Secret</label>
           <div class="secret-val-wrap">
@@ -750,10 +1202,17 @@ git push -u origin main</code></pre>
       <div style="margin-top:24px; margin-bottom:24px;">
         <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">③ テスト用アカウントの設定</h4>
         <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>ブラウザで <strong>テスト用アカウント</strong> に切り替えます。</li>
-          <li>再度 <code>npm run get-tokens</code> を実行し、認証します。</li>
-          <li>表示されたトークンを以下に入力してください。</li>
+          <li>同様に <strong>新しいシークレットウィンドウ</strong> で <strong>テスト用アカウント</strong> にログインします。</li>
+          <li><code>npm run get-tokens</code> を実行してトークンを取得します。</li>
         </ol>
+
+        <pre style="margin-bottom:8px; font-size:12px; line-height:1.3; background:#1e293b; color:#cbd5e1; padding:12px; border-radius:6px;">$ npm run get-tokens
+...
+(テスト用アカウントで認証)
+...
+Access Token:        <span style="color:#4ade80;">111222...</span>
+Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
+
         <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
           <label>▼ テスト用 Token / Secret</label>
           <div class="secret-val-wrap">
@@ -766,7 +1225,20 @@ git push -u origin main</code></pre>
 
 
       <h3>2. Secretsへの登録</h3>
-      <p>GitHub Settings > Secrets > Actions に以下を登録します。</p>
+      <p>取得したすべての認証情報をGitHubに登録し、Botが使えるようにします。</p>
+      <ol>
+        <li>GitHubのリポジトリ画面を開き、上部タブの <strong>[Settings]</strong> をクリックします。</li>
+        <li>左サイドメニューの <strong>[Secrets and variables]</strong> をクリックして展開し、中の <strong>[Actions]</strong> を選択します。</li>
+        <li>画面右上にある緑色の <strong>[New repository secret]</strong> ボタンをクリックします。</li>
+        <li>登録画面が開くので、以下のリストから <strong>Name</strong> と <strong>Secret</strong> をコピーして貼り付け、<strong>[Add secret]</strong> で保存します。</li>
+        <li>これをリストの全項目分（10個）繰り返してください。</li>
+      </ol>
+      
+      <div class="note">
+        <strong>💡 ヒント:</strong><br>
+        以下のリストの「名前コピー」「値コピー」ボタンを使うと便利です。<br>
+        登録済みのSecretは値が見えなくなりますが、上書き（Update）は可能です。
+      </div>
       
       <div id="secrets_list_container">
         <!-- Generated via JS -->
