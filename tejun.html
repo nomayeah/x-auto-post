@@ -238,15 +238,6 @@
       color: #64748b;
     }
 
-    .note {
-      background: #fffbeb;
-      border-left: 4px solid #f59e0b;
-      padding: 12px 16px;
-      color: #92400e;
-      font-size: 14px;
-      margin: 16px 0;
-    }
-
     /* ステータスバー */
     .status-bar {
       position: fixed;
@@ -307,6 +298,50 @@
     .missing-item { margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
     .missing-item::before { content: "•"; }
 
+    /* ユーティリティクラス (スタイルの統一用) */
+    .text-danger { color: #e11d48; font-weight: 700; }
+    .text-success { color: #059669; font-weight: 700; }
+    .text-highlight { color: #4ade80; }
+    .text-warn { color: #fcd34d; }
+    .text-sm { font-size: 13px; }
+    
+    .mt-4 { margin-top: 16px; }
+    .mt-6 { margin-top: 24px; }
+    .mb-2 { margin-bottom: 8px; }
+    
+    /* ノート（通常・警告） */
+    .note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 16px;
+      color: #92400e;
+      font-size: 14px;
+      margin: 16px 0;
+      border-radius: 0 4px 4px 0;
+    }
+    .note.danger {
+      background: #fef2f2;
+      border-left-color: #ef4444;
+      color: #991b1b;
+    }
+
+    /* コマンドログ表示用 */
+    .code-log {
+      font-size: 12px;
+      line-height: 1.4;
+      background: #1e293b;
+      color: #cbd5e1;
+      padding: 16px;
+      border-radius: 8px;
+      margin: 12px 0 16px 0;
+      font-family: 'SFMono-Regular', Consolas, monospace;
+      border: 1px solid #334155;
+    }
+    .code-log .cmd { color: #e2e8f0; font-weight: bold; }
+    .code-log .comment { color: #94a3b8; }
+    .code-log .highlight { color: #4ade80; font-weight: bold; }
+    .code-log .warn { color: #fcd34d; }
+
     @media (max-width: 600px) {
       .account-inputs { grid-template-columns: 1fr; }
       .secret-item { flex-direction: column; align-items: stretch; gap: 8px; }
@@ -316,14 +351,14 @@
 </head>
 <body>
 
-<div class="wrap">
-  <header>
-    <div class="logo">X</div>
-    <div>
+  <div class="wrap">
+    <header>
+      <div class="logo">X</div>
+      <div>
       <h1>X自動投稿Bot 構築手順書</h1>
       <div class="meta">Ver 3.2 - Role Based Manual</div>
-    </div>
-  </header>
+      </div>
+    </header>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="showTab('satchin')">👩‍💼 さっちん様用 (入力・申請)</button>
@@ -357,7 +392,7 @@
         <tr><th>申請項目</th><th>内容</th></tr>
         <tr><td>MLアドレス名</td><td>例: <code>x-auto-post-admin@cocoloni.com</code></td></tr>
         <tr><td>用途</td><td>X自動投稿システム管理グループ</td></tr>
-        <tr><td>メンバー</td><td><strong>さっちん</strong> / <strong>なみっぴょ</strong> / その他関係者</td></tr>
+        <tr><td>メンバー</td><td><strong>さっちんさん</strong> / <strong>なみっぴょ</strong> / その他関係者</td></tr>
       </table>
       
       <div class="input-group">
@@ -389,7 +424,7 @@
         <label>▼ Service Account JSON (ダウンロードしたファイルの中身を全貼り付け)</label>
         <textarea id="gcp_json" placeholder='{ "type": "service_account", ... }' data-required="GCP JSONキー"></textarea>
         
-        <label style="margin-top:12px;">▼ Botのメールアドレス (x-post-bot@...)</label>
+        <label class="mt-4">▼ Botのメールアドレス (x-post-bot@...)</label>
         <input type="text" id="bot_email" placeholder="x-post-bot@project-id.iam.gserviceaccount.com" data-required="Botメールアドレス" />
       </div>
     </div>
@@ -415,7 +450,7 @@
 
       <h3>2. テストデータの入力</h3>
       <p>動作確認のため、以下の内容で1行データを入力しておいてください。</p>
-      <table style="font-size:13px;">
+      <table class="text-sm">
         <tr><th>項目</th><th>入力値</th></tr>
         <tr><td>日付 / 時間</td><td>今日の日付 / 現在より前の時間</td></tr>
         <tr><td>アカウント</td><td>任意の文字 (テスト時は無視されます)</td></tr>
@@ -452,7 +487,7 @@
       <p><a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">Developer Portal</a> でアプリを作成し、Keys and tokensを取得してください。</p>
       <div class="input-group">
         <label>▼ API Key</label>
-        <input type="text" id="x_api_key" placeholder="API Key" style="margin-bottom:8px;" data-required="X API Key" />
+        <input type="text" id="x_api_key" placeholder="API Key" class="mb-2" data-required="X API Key" />
         <label>▼ API Key Secret</label>
         <input type="text" id="x_api_secret" placeholder="API Key Secret" data-required="X API Secret" />
       </div>
@@ -470,7 +505,7 @@
         <li><a href="https://github.com/signup" target="_blank">GitHub Signup</a> にアクセスします。</li>
         <li><strong>Enter your email:</strong> MLアドレス (<code>x-auto-post-admin@...</code>) を入力します。</li>
         <li><strong>Create a password:</strong> 任意のパスワードを設定します。<br>
-          <span style="color:#e11d48; font-weight:bold;">※このパスワードはエンジニアに共有するため、下の入力欄にも控えてください。</span>
+          <span class="text-danger">※このパスワードはエンジニアに共有するため、下の入力欄にも控えてください。</span>
         </li>
         <li><strong>Enter a username:</strong> アカウントIDを決めます（例: <code>cocoloni-x-bot-2024</code> 等）。<br>
           <small>※これが「ユーザー名」になります。他と被らないユニークな名前が必要です。</small>
@@ -488,7 +523,7 @@
       <ol>
         <li>ログイン後の画面右上にある <strong>「＋」アイコン</strong> から <strong>New repository</strong> を選びます。</li>
         <li><strong>Repository name</strong> に <code>x-auto-post</code> と入力します。</li>
-        <li><strong>Public / Private</strong> の選択で、必ず <strong style="color:#e11d48;">Private</strong> を選んでください。<br>
+        <li><strong>Public / Private</strong> の選択で、必ず <strong class="text-danger">Private</strong> を選んでください。<br>
           <small>※Privateにしないと社外に公開されてしまいます。</small>
         </li>
         <li>その他は変更せず、画面下の <strong>Create repository</strong> ボタンを押します。</li>
@@ -501,7 +536,7 @@
       </div>
 
       <h3>3. 開発用トークンの発行</h3>
-      <p>エンジニアがプログラムをアップロードするために必要な「パスワード代わりの鍵（トークン）」を発行します。</p>
+      <p>エンジニアがプログラムをアップロードするために必要な「パスワード代わりの鍵（アクセストークン）」を発行します。</p>
       <ol>
         <li>画面右上のアイコン > <strong>Settings</strong> > 左メニュー最下部の <strong>Developer settings</strong> を開きます。</li>
         <li><strong>Personal access tokens</strong> > <strong>Tokens (classic)</strong> を選び、<strong>Generate new token (classic)</strong> を押します。</li>
@@ -509,7 +544,7 @@
         <li><strong>Select scopes</strong> で <strong>repo</strong>（一番上）にチェックを入れます。</li>
         <li>画面下の <strong>Generate token</strong> を押します。</li>
         <li><code>ghp_</code> から始まる文字列が表示されるので、コピーして以下に貼り付けてください。<br>
-        <span style="color:#e11d48; font-weight:bold;">※この画面を閉じると二度と表示されないので注意してください。</span></li>
+        <span class="text-danger">※この画面を閉じると二度と表示されないので注意してください。</span></li>
       </ol>
 
       <div class="input-group">
@@ -527,7 +562,7 @@
       <small>※エンジニアはこのデータを使って設定作業を行います。</small></p>
       
       <textarea id="handover_data" style="width:100%; height:200px;" readonly></textarea>
-      <div style="margin-top:12px;">
+      <div class="mt-4">
         <button class="btn" onclick="copyHandoverData()">クリップボードにコピー</button>
       </div>
     </div>
@@ -542,7 +577,7 @@
     
     <div class="card" style="background:#1e293b; border-color:#334155; color:white;">
       <h2 style="color:white;">🔧 引継ぎデータの読込</h2>
-      <p style="color:#cbd5e1;">さっちん様から受領したデータをここに貼り付けてください。<br>
+      <p style="color:#cbd5e1;">さっちんさんから受領したデータをここに貼り付けてください。<br>
       自動的に入力欄へ反映されます。</p>
       <textarea id="import_data" placeholder="ここにデータを貼り付け..." style="width:100%; height:100px; background:#0f1724; border:1px solid #334155; color:#4ade80; padding:10px; border-radius:6px; font-family:monospace;"></textarea>
       <button class="btn" style="margin-top:12px;" onclick="importHandoverData()">データを読み込む</button>
@@ -552,7 +587,7 @@
       <span class="role-badge role-engineer">Step 1</span>
       <h2>コードの実装とPush</h2>
       
-      <p>さっちん様が作成したリポジトリに、Botのプログラムをアップロードします。</p>
+      <p>さっちんさんが作成したリポジトリに、Botのプログラムをアップロードします。</p>
 
       <h3>1. プロジェクトの準備とファイル配置</h3>
       <pre><code># ディレクトリ作成
@@ -835,7 +870,7 @@ async function main() {
 
     // 1. データ取得
     const rows = await getSpreadsheetData();
-    if (rows.length &lt; 2) {
+    if (rows.length < 2) {
         console.log('データがありません');
         return;
     }
@@ -858,7 +893,7 @@ async function main() {
     const now = new Date();
 
     // 2. 行ごとの処理
-    for (let i = 1; i &lt; rows.length; i++) {
+    for (let i = 1; i < rows.length; i++) {
         const row = rows[i];
         const dateStr = row[colMap.date];
         const timeStr = row[colMap.time];
@@ -869,7 +904,7 @@ async function main() {
 
         // 日時パース
         const postTime = new Date(`${dateStr.replace(/\//g, '-')} ${timeStr}`);
-        const isPast = postTime &lt;= now;
+        const isPast = postTime <= now;
 
         let shouldPost = false;
         let targetAccount = account;
@@ -1134,148 +1169,132 @@ npm install</code></pre>
          </div>
       </div>
 
-      <pre><code>git add .
+      <pre class="code-log">git add .
 git commit -m "Initial commit"
 git branch -M main
 
-# リモート登録 (URLは上記のものを使用)
+<span class="comment"># リモート登録 (URLは上記のものを使用)</span>
 git remote add origin <span id="repo_url_cmd">https://github.com/...</span>
 
-git push -u origin main</code></pre>
+git push -u origin main</pre>
     </div>
 
+    <!-- Engineer Step 2 -->
     <div class="card">
       <span class="role-badge role-engineer">Step 2</span>
       <h2>認証情報の登録 (GitHub Secrets)</h2>
-      
+      <p>セキュリティ保持のため、パスワードや鍵などの機密情報はすべて <strong>GitHub Secrets</strong> に登録します。</p>
+
+      <div class="note danger">
+        <strong>⚠️ 重要: シークレットウィンドウを使用してください</strong><br>
+        ここからの作業（X認証）は、ブラウザのキャッシュによるアカウント取り違えを防ぐため、必ず<strong>シークレットウィンドウ</strong>（Incognito Mode）で行ってください。<br>
+        手順: <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd> (Macは <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>N</kbd>) で新しいウィンドウを開き、そこで作業を進めます。
+      </div>
+
       <h3>1. アクセストークンの取得</h3>
-      <p>各アカウントごとにトークンを発行し、それぞれの欄に入力してください。<br>
-      <small>※ブラウザでアカウントを切り替えながら、<code>npm run get-tokens</code> を実行します。</small></p>
+      <p>ローカル環境でツールを実行し、各アカウントのアクセストークンを取得します。<br>
+      アカウントごとに <strong>[ログイン] → [コマンド実行] → [値をコピー]</strong> の順で進めてください。</p>
 
-      <div style="margin-top:24px;">
-        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">① チャプリ の設定</h4>
-        <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>Chrome等の <strong>シークレットウィンドウ</strong> を開き、<strong>チャプリのアカウント</strong> にログインします。</li>
-          <li>ターミナルで <code>npm run get-tokens</code> を実行し、以下の流れでトークンを取得します。</li>
-          <li>最後に表示された <strong>Access Token</strong> と <strong>Secret</strong> を下の欄に入力してください。</li>
-        </ol>
+      <!-- チャプリ -->
+      <div class="input-group" style="border:1px solid #e2e8f0; padding:16px; border-radius:8px; margin-bottom:16px;">
+        <h4 style="margin-top:0;">① チャプリ (@<span id="disp_id_a">...</span>)</h4>
+        <p class="text-sm">1. シークレットウィンドウで <a href="https://twitter.com/login" target="_blank">X (Twitter)</a> にログインします。<br>
+        (ID: <strong id="disp_id_a_val">...</strong> / PW: <strong id="disp_pw_a_val">...</strong>)</p>
         
-        <pre style="margin-bottom:8px; font-size:12px; line-height:1.3; background:#1e293b; color:#cbd5e1; padding:12px; border-radius:6px;">$ npm run get-tokens
+        <p class="text-sm">2. 以下のコマンドを実行し、表示されたURLにアクセスして認証します。</p>
+        <pre class="code-log"><span class="cmd">npm run get-tokens</span>
 
-=== X (Twitter) アカウント認証ツール ===
-API Key: <span style="color:#4ade80;">(引継ぎデータの X_API_KEY を貼り付け)</span>
-API Key Secret: <span style="color:#4ade80;">(引継ぎデータの X_API_SECRET を貼り付け)</span>
+<span class="comment"># 1. Developer Portalの API Key / Secret を入力</span>
+API Key: <span class="highlight">(API Keyを貼り付け)</span>
+API Key Secret: <span class="highlight">(API Secretを貼り付け)</span>
 
-URL: https://api.x.com/...
-<span style="color:#fcd34d;">(↑ このURLがブラウザで開きます。連携アプリを許可してください)</span>
-<span style="color:#fcd34d;">(「サイトにアクセスできません」等の画面になったら、URLバーから `oauth_verifier` をコピー)</span>
+<span class="comment"># 2. ブラウザで認証後、エラーページのURLから oauth_verifier をコピーして貼り付け</span>
+<span class="warn">http://127.0.0.1:3000/callback?oauth_token=...&oauth_verifier=</span><span class="highlight">HAND_COPY_THIS_CODE</span>
 
-コピーした oauth_verifier を貼り付けてEnter: <span style="color:#4ade80;">(コピーした値を貼り付け)</span>
-
-✅ 認証成功！
-Access Token:        <span style="color:#4ade80;">123456...</span>  <-- これをコピー
-Access Token Secret: <span style="color:#4ade80;">abcdef...</span>  <-- これをコピー</pre>
-
-        <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
-          <label>▼ チャプリ Token / Secret</label>
-          <div class="secret-val-wrap">
-            <input type="text" id="token_a" placeholder="Access Token" />
-            <input type="text" id="secret_a" placeholder="Secret" />
+<span class="comment"># 3. 取得されたTokenが表示されます</span>
+Access Token: ...
+Access Token Secret: ...</pre>
+        
+        <div class="secret-item">
+          <div style="flex:1">
+            <label>Access Token</label>
+            <input type="text" id="token_a" placeholder="取得したTokenを貼り付け" oninput="updateSecretsDisplay()" />
+          </div>
+          <div style="flex:1">
+            <label>Access Token Secret</label>
+            <input type="text" id="secret_a" placeholder="取得したSecretを貼り付け" oninput="updateSecretsDisplay()" />
+          </div>
+        </div>
+      </div>
+      
+      <!-- ロバミミ -->
+      <div class="input-group" style="border:1px solid #e2e8f0; padding:16px; border-radius:8px; margin-bottom:16px;">
+        <h4 style="margin-top:0;">② ロバミミ (@<span id="disp_id_b">...</span>)</h4>
+        <p class="text-sm">1. <strong>一度Xからログアウトし</strong>、ロバミミのアカウントで再ログインします。<br>
+        (ID: <strong id="disp_id_b_val">...</strong> / PW: <strong id="disp_pw_b_val">...</strong>)</p>
+        <p class="text-sm">2. 再度 <code>npm run get-tokens</code> を実行してトークンを取得します。</p>
+        <div class="secret-item">
+          <div style="flex:1">
+            <label>Access Token</label>
+            <input type="text" id="token_b" placeholder="取得したTokenを貼り付け" oninput="updateSecretsDisplay()" />
+          </div>
+          <div style="flex:1">
+            <label>Access Token Secret</label>
+            <input type="text" id="secret_b" placeholder="取得したSecretを貼り付け" oninput="updateSecretsDisplay()" />
           </div>
         </div>
       </div>
 
-      <div style="margin-top:24px;">
-        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">② ロバミミ の設定</h4>
-        <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>一度ブラウザを閉じ、<strong>新しいシークレットウィンドウ</strong> を開いて <strong>ロバミミのアカウント</strong> にログインします。</li>
-          <li>再度 <code>npm run get-tokens</code> を実行し、同様に認証を行います。</li>
-          <li>表示されたトークンを以下に入力してください。</li>
-        </ol>
-
-        <pre style="margin-bottom:8px; font-size:12px; line-height:1.3; background:#1e293b; color:#cbd5e1; padding:12px; border-radius:6px;">$ npm run get-tokens
-...
-API Key: <span style="color:#4ade80;">(同じKeyを使用)</span>
-API Key Secret: <span style="color:#4ade80;">(同じSecretを使用)</span>
-...
-(ロバミミのアカウントで認証)
-...
-Access Token:        <span style="color:#4ade80;">987654...</span>
-Access Token Secret: <span style="color:#4ade80;">zyxwvu...</span></pre>
-
-        <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
-          <label>▼ ロバミミ Token / Secret</label>
-          <div class="secret-val-wrap">
-            <input type="text" id="token_b" placeholder="Access Token" />
-            <input type="text" id="secret_b" placeholder="Secret" />
+      <!-- テスト用 -->
+      <div class="input-group" style="border:1px solid #e2e8f0; padding:16px; border-radius:8px; margin-bottom:16px;">
+        <h4 style="margin-top:0;">③ テスト用 (@<span id="disp_id_test">...</span>)</h4>
+        <p class="text-sm">1. <strong>一度Xからログアウトし</strong>、テスト用アカウントで再ログインします。<br>
+        (ID: <strong id="disp_id_test_val">...</strong> / PW: <strong id="disp_pw_test_val">...</strong>)</p>
+        <p class="text-sm">2. 再度 <code>npm run get-tokens</code> を実行してトークンを取得します。</p>
+        <div class="secret-item">
+          <div style="flex:1">
+            <label>Access Token</label>
+            <input type="text" id="token_test" placeholder="取得したTokenを貼り付け" oninput="updateSecretsDisplay()" />
+          </div>
+          <div style="flex:1">
+            <label>Access Token Secret</label>
+            <input type="text" id="secret_test" placeholder="取得したSecretを貼り付け" oninput="updateSecretsDisplay()" />
           </div>
         </div>
       </div>
 
-      <div style="margin-top:24px; margin-bottom:24px;">
-        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">③ テスト用アカウントの設定</h4>
-        <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>同様に <strong>新しいシークレットウィンドウ</strong> で <strong>テスト用アカウント</strong> にログインします。</li>
-          <li><code>npm run get-tokens</code> を実行してトークンを取得します。</li>
-        </ol>
-
-        <pre style="margin-bottom:8px; font-size:12px; line-height:1.3; background:#1e293b; color:#cbd5e1; padding:12px; border-radius:6px;">$ npm run get-tokens
-...
-(テスト用アカウントで認証)
-...
-Access Token:        <span style="color:#4ade80;">111222...</span>
-Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
-
-        <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
-          <label>▼ テスト用 Token / Secret</label>
-          <div class="secret-val-wrap">
-            <input type="text" id="token_test" placeholder="Access Token" />
-            <input type="text" id="secret_test" placeholder="Secret" />
-          </div>
-        </div>
-      </div>
-
-
-
-      <h3>2. Secretsへの登録</h3>
-      <p>取得したすべての認証情報をGitHubに登録し、Botが使えるようにします。</p>
+      <h3>2. GitHub Secretsへの登録</h3>
+      <p>取得したすべての情報をGitHubに登録します。</p>
       <ol>
-        <li>GitHubのリポジトリ画面を開き、上部タブの <strong>[Settings]</strong> をクリックします。</li>
-        <li>左サイドメニューの <strong>[Secrets and variables]</strong> をクリックして展開し、中の <strong>[Actions]</strong> を選択します。</li>
-        <li>画面右上にある緑色の <strong>[New repository secret]</strong> ボタンをクリックします。</li>
-        <li>登録画面が開くので、以下のリストから <strong>Name</strong> と <strong>Secret</strong> をコピーして貼り付け、<strong>[Add secret]</strong> で保存します。</li>
-        <li>これをリストの全項目分（10個）繰り返してください。</li>
+        <li>GitHubリポジトリを開き、<strong>Settings</strong> タブをクリックします。</li>
+        <li>左メニューの <strong>Secrets and variables</strong> > <strong>Actions</strong> をクリックします。</li>
+        <li><strong>New repository secret</strong> ボタンを押し、以下のリストを上から順に登録してください。</li>
       </ol>
-      
-      <div class="note">
-        <strong>💡 ヒント:</strong><br>
-        以下のリストの「名前コピー」「値コピー」ボタンを使うと便利です。<br>
-        登録済みのSecretは値が見えなくなりますが、上書き（Update）は可能です。
-      </div>
-      
-      <div id="secrets_list_container">
-        <!-- Generated via JS -->
+
+      <div id="secrets-list">
+        <!-- JSで動的に生成されます -->
+        <div style="padding:20px; text-align:center; color:#64748b;">
+          Step 1で引継ぎデータを入力すると、ここに登録リストが表示されます。
+        </div>
       </div>
     </div>
 
     <div class="card">
       <span class="role-badge role-engineer">Step 3</span>
       <h2>動作確認 (Manual Test)</h2>
-      <p>設定が正しく完了したか、テスト実行を行って確認します。<br>
-      <small>※前提: スプレッドシートにステータス「<strong>確認待ち</strong>」のデータが1行以上あること。</small></p>
+      <p>設定が正しいか、手動テストを実行して確認します。</p>
       
-      <h3>1. テスト投稿の実行</h3>
-      <ol>
-        <li>GitHubのリポジトリ画面で、上部タブの <strong>[Actions]</strong> をクリックします。</li>
-        <li>左サイドメニューから <strong>[Manual Test Post]</strong> を選択します。</li>
-        <li>右側にある <strong>[Run workflow]</strong> ボタンをクリックし、緑色の <strong>[Run workflow]</strong> ボタンを押して実行します。</li>
-      </ol>
+      <div class="note">
+        <strong>前提:</strong> スプレッドシートにテストデータ（ステータス「確認待ち」の行）があることを確認してください。<br>
+        ない場合は、さっちんさんに連絡して入力してもらってください。
+      </div>
 
-      <h3>2. 結果の確認</h3>
       <ol>
-        <li>画面中央に実行中のワークフローが表示されます。黄色い回転アイコンから、緑色のチェックマーク✅に変われば成功です。</li>
-        <li>もし赤色の×になった場合は、クリックして詳細ログを確認し、エラー内容（401認証エラーなど）を特定してください。</li>
-        <li>成功した場合、<strong>テスト用アカウント</strong> に実際に画像付きポストが投稿されていること、および <strong>スプレッドシート</strong> のステータスが「確認済み」等に更新されていることを確認してください。</li>
+        <li>GitHubリポジトリの <strong>Actions</strong> タブを開きます。</li>
+        <li>左メニューから <strong>Manual Test Post</strong> を選択します。</li>
+        <li>右側の <strong>Run workflow</strong> ボタンをクリックし、緑色の <strong>Run workflow</strong> を押します。</li>
+        <li>実行が完了（緑のチェックマーク）するのを待ちます。</li>
+        <li>スプレッドシートを確認し、ステータスが <strong>「確認待ち」→「確認済み」</strong> に変わっていれば成功です！</li>
       </ol>
     </div>
 
@@ -1285,7 +1304,7 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
        運用マニュアルタブ
        ========================================== -->
   <div id="tab-operation" class="tab-content">
-    
+
     <div class="card">
       <span class="role-badge role-satchin">Routine</span>
       <h2>日常の投稿フロー</h2>
@@ -1309,7 +1328,7 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
             <li><strong>アカウント</strong>: チャプリ or ロバミミ</li>
             <li><strong>テキスト</strong>: 投稿本文</li>
             <li><strong>画像</strong>: Step 1でコピーしたURL</li>
-            <li><strong>ステータス</strong>: <strong style="color:#ef4444;">確認待ち</strong> を選択</li>
+            <li><strong>ステータス</strong>: <strong class="text-warn">確認待ち</strong> を選択</li>
           </ul>
         </div>
 
@@ -1319,7 +1338,7 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
           <p>エンジニアに「テスト実行」を依頼するか、Botの自動テストを待ちます。</p>
           <ul>
             <li>Botがテスト用アカウントに投稿を行います。</li>
-            <li>投稿が成功すると、シートのステータスが自動的に <strong style="color:#f59e0b;">確認済み</strong> に変わります。</li>
+            <li>投稿が成功すると、シートのステータスが自動的に <strong class="text-success">確認済み</strong> に変わります。</li>
             <li>実際のX（テスト垢）を見て、画像や改行が正しいか確認してください。</li>
           </ul>
         </div>
@@ -1327,7 +1346,7 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
         <!-- Step 4 -->
         <div style="border:1px solid #e2e8f0; border-radius:8px; padding:16px; background:white;">
           <h3 style="margin-top:0; font-size:16px; border-color:#3b82f6;">Step 4: 承認 (Goサイン)</h3>
-          <p>内容に問題がなければ、シートのステータスを手動で <strong style="color:#10b981;">承認済み</strong> に変更してください。</p>
+          <p>内容に問題がなければ、シートのステータスを手動で <strong class="text-highlight">承認済み</strong> に変更してください。</p>
           <p class="note">※ これで予約完了です。指定時間になるとBotが本番投稿します。</p>
         </div>
 
