@@ -1245,6 +1245,26 @@ Access Token Secret: <span style="color:#4ade80;">AAABBB...</span></pre>
       </div>
     </div>
 
+    <div class="card">
+      <span class="role-badge role-engineer">Step 3</span>
+      <h2>動作確認 (Manual Test)</h2>
+      <p>設定が正しく完了したか、テスト実行を行って確認します。</p>
+      
+      <h3>1. テスト投稿の実行</h3>
+      <ol>
+        <li>GitHubのリポジトリ画面で、上部タブの <strong>[Actions]</strong> をクリックします。</li>
+        <li>左サイドメニューから <strong>[Manual Test Post]</strong> を選択します。</li>
+        <li>右側にある <strong>[Run workflow]</strong> ボタンをクリックし、緑色の <strong>[Run workflow]</strong> ボタンを押して実行します。</li>
+      </ol>
+
+      <h3>2. 結果の確認</h3>
+      <ol>
+        <li>画面中央に実行中のワークフローが表示されます。黄色い回転アイコンから、緑色のチェックマーク✅に変われば成功です。</li>
+        <li>もし赤色の×になった場合は、クリックして詳細ログを確認し、エラー内容（401認証エラーなど）を特定してください。</li>
+        <li>成功した場合、<strong>テスト用アカウント</strong> に実際に画像付きポストが投稿されていること、および <strong>スプレッドシート</strong> のステータスが「確認済み」等に更新されていることを確認してください。</li>
+      </ol>
+    </div>
+
   </div><!-- End engineer tab -->
 
   <!-- ステータスバー -->
