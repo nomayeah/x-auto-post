@@ -1,0 +1,1047 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>X自動投稿Bot 構築手順書</title>
+  <style>
+    /* 全体 */
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --muted: #64748b;
+      --accent: #2563eb;
+      --accent-light: #eff6ff;
+      --border: #e2e8f0;
+      --radius: 12px;
+      font-family: "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+      color-scheme: light;
+    }
+    html,body {
+      height: 100%;
+      margin: 0;
+      background: var(--bg);
+      color: #0f1724;
+    }
+    .wrap {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 30px 20px 100px; /* Footer space */
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+    .logo {
+      width: 50px;
+      height: 50px;
+      border-radius: 12px;
+      background: #ffffff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:900;
+      color: var(--accent);
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      font-size: 24px;
+    }
+    h1 { margin: 0; font-size: 24px; color: #1e293b; }
+    .meta { color: var(--muted); font-size: 14px; margin-top: 4px; }
+
+    /* タブシステム */
+    .tabs {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--border);
+      padding-bottom: 0;
+    }
+    .tab-btn {
+      padding: 12px 24px;
+      font-weight: bold;
+      font-size: 15px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      color: var(--muted);
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      margin-bottom: -2px;
+    }
+    .tab-btn:hover { color: var(--accent); }
+    .tab-btn.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-content { display: none; animation: fadeIn 0.3s ease; }
+    .tab-content.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* カード */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+    .role-satchin { background: #e0f2fe; color: #0369a1; }
+    .role-engineer { background: #f3e8ff; color: #7e22ce; }
+
+    h2 { margin: 0 0 16px 0; font-size: 20px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+    h3 { margin: 28px 0 12px 0; font-size: 16px; border-left: 4px solid var(--accent); padding-left: 10px; color: #334155; }
+    p { margin: 12px 0; line-height: 1.7; color: #475569; }
+    ol, ul { margin: 12px 0 16px 24px; padding: 0; color: #475569; }
+    li { margin: 8px 0; }
+    strong { color: #1e293b; font-weight: 700; }
+    
+    /* テーブル */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    th,td { padding: 12px; border: 1px solid var(--border); text-align: left; }
+    th { background: #f1f5f9; font-weight: 600; width: 30%; color: #334155; }
+
+    /* 入力フォーム系 */
+    .input-group {
+      background: #f8fafc;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px dashed #cbd5e1;
+      margin-top: 16px;
+      transition: all 0.3s;
+    }
+    .input-group.filled {
+      background: #f0fdf4;
+      border-color: #86efac;
+      border-style: solid;
+    }
+    .input-group label {
+      display: block;
+      font-weight: bold;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: #475569;
+    }
+    .input-group input, .input-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      font-family: monospace;
+    }
+    .input-group textarea { height: 80px; resize: vertical; }
+    .input-group input:focus, .input-group textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    .account-inputs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    /* コードブロック */
+    pre {
+      background: #1e293b;
+      color: #f1f5f9;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+      font-size: 13px;
+      margin: 16px 0;
+    }
+    code {
+      background: #f1f5f9;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+      color: #0f1724;
+    }
+
+    /* ボタン */
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #1d4ed8; }
+    .btn-copy { font-size: 12px; padding: 4px 12px; margin-left: 8px; flex-shrink: 0; white-space: nowrap; }
+
+    /* 引継ぎエリア */
+    .handover-area {
+      background: #1e293b;
+      border-radius: 8px;
+      padding: 24px;
+      color: white;
+      margin-top: 20px;
+    }
+    .handover-area h3 { color: white; border-color: #475569; margin-top: 0; }
+    .handover-area textarea {
+      background: #0f1724;
+      color: #4ade80;
+      border: 1px solid #334155;
+    }
+
+    /* Secretsリスト */
+    .secret-item {
+      display: flex;
+      align-items: center;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-bottom: none;
+      padding: 12px;
+    }
+    .secret-item:last-child { border-bottom: 1px solid var(--border); }
+    .secret-item:first-child { border-radius: 8px 8px 0 0; }
+    .secret-item:last-child { border-radius: 0 0 8px 8px; }
+    
+    .secret-info { flex: 1; }
+    .secret-key { font-weight: bold; font-size: 14px; color: var(--accent); font-family: monospace; }
+    .secret-val-wrap { display: flex; gap: 8px; margin-top: 4px; }
+    .secret-val-wrap input { 
+      flex: 1; 
+      background: #f8fafc; 
+      border: 1px solid #e2e8f0; 
+      padding: 4px 8px; 
+      border-radius: 4px; 
+      font-family: monospace;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .note {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      padding: 12px 16px;
+      color: #92400e;
+      font-size: 14px;
+      margin: 16px 0;
+    }
+
+    /* ステータスバー */
+    .status-bar {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 300px;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      padding: 16px;
+      z-index: 1000;
+      border: 1px solid var(--border);
+      display: none; /* JSで表示制御 */
+    }
+    .status-bar.visible { display: block; animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { transform: translateY(20px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+    
+    .status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .status-title { font-weight: bold; font-size: 14px; color: #1e293b; }
+    .status-percent { font-weight: bold; font-size: 14px; color: var(--accent); }
+    
+    /* プログレスバーとキャラクター */
+    .progress-container { position: relative; margin-bottom: 12px; height: 24px; }
+    .progress-bg { 
+      position: absolute; bottom: 0; left: 0;
+      width: 100%; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: visible; 
+    }
+    .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.5s ease; border-radius: 3px; }
+    
+    /* 走る犬 */
+    .runner {
+      position: absolute;
+      bottom: 6px; /* バーの上 */
+      left: 0%;
+      transform: translateX(-50%);
+      transition: left 0.5s ease;
+      font-size: 24px;
+      line-height: 1;
+      animation: bounce 0.5s infinite alternate;
+      z-index: 2;
+    }
+    /* ゴール */
+    .goal {
+      position: absolute;
+      right: 0;
+      bottom: 6px;
+      font-size: 24px;
+      line-height: 1;
+      transform: translateX(50%);
+      z-index: 1;
+    }
+
+    @keyframes bounce { from { transform: translateX(-50%) translateY(0); } to { transform: translateX(-50%) translateY(-4px); } }
+    @keyframes pop { 0% { transform: translateX(50%) scale(1); } 50% { transform: translateX(50%) scale(1.4); } 100% { transform: translateX(50%) scale(1); } }
+    
+    .status-msg { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .missing-list { font-size: 11px; color: #ef4444; max-height: 80px; overflow-y: auto; }
+    .missing-item { margin-bottom: 2px; display: flex; align-items: center; gap: 4px; }
+    .missing-item::before { content: "•"; }
+
+    @media (max-width: 600px) {
+      .account-inputs { grid-template-columns: 1fr; }
+      .secret-item { flex-direction: column; align-items: stretch; gap: 8px; }
+      .status-bar { left: 20px; width: auto; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="logo">X</div>
+    <div>
+      <h1>X自動投稿Bot 構築手順書</h1>
+      <div class="meta">Ver 3.2 - Role Based Manual</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('satchin')">👩‍💼 さっちん様用 (入力・申請)</button>
+    <button class="tab-btn" onclick="showTab('engineer')">👨‍💻 エンジニア様用 (構築・設定)</button>
+  </div>
+
+  <!-- ==========================================
+       さっちん様用タブ
+       ========================================== -->
+  <div id="tab-satchin" class="tab-content active">
+    
+    <div class="note">
+      <strong>はじめに:</strong><br>
+      このタブの手順を上から順に進めてください。入力したデータは自動的に保存されます。<br>
+      右下のステータスバーで進捗を確認できます。
+    </div>
+
+    <!-- Phase 1: ML作成 -->
+    <div class="card" id="step-ml">
+      <span class="role-badge role-satchin">Step 1</span>
+      <h2>管理用グループ（ML）の作成依頼</h2>
+      <p>Botの管理権限を持つための「チーム（メーリングリスト）」を作ります。<br>
+      社内のワークフロー（アイフロー等）から、<strong>なみっぴょ（Infra担当）</strong> へ作成を依頼してください。</p>
+      
+      <p><strong>【用途】</strong><br>
+      GCP（Google Cloud）プロジェクトの管理者グループとして使用します。<br>
+      これを設定することで、特定の個人ではなくチームでBotを管理できるようになります。</p>
+
+      <table>
+        <tr><th>申請項目</th><th>内容</th></tr>
+        <tr><td>MLアドレス名</td><td>例: <code>x-auto-post-admin@cocoloni.com</code></td></tr>
+        <tr><td>用途</td><td>X自動投稿システム管理グループ</td></tr>
+        <tr><td>メンバー</td><td><strong>さっちん</strong> / <strong>なみっぴょ</strong> / その他関係者</td></tr>
+      </table>
+      
+      <div class="input-group">
+        <label>▼ 作成されたMLアドレスを入力してください</label>
+        <input type="text" id="ml_address" placeholder="例: x-auto-post-admin@cocoloni.com" data-required="MLアドレス" />
+      </div>
+    </div>
+
+    <!-- Phase 2: GCP設定 -->
+    <div class="card" id="step-gcp">
+      <span class="role-badge role-satchin">Step 2</span>
+      <h2>Google Cloud (GCP) の設定</h2>
+      <p>Botの実体となる「プロジェクト」と「アカウント」を作成します。</p>
+
+      <h3>1. プロジェクト作成と権限付与</h3>
+      <ol>
+        <li><a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> で新規プロジェクト <code>x-auto-post-system</code> を作成します。（組織: cocoloni.com）</li>
+        <li><strong>IAMと管理 > IAM</strong> で、先ほど作った <strong>MLアドレス</strong> を追加し、ロールに <strong>オーナー</strong> を付与します。</li>
+      </ol>
+
+      <h3>2. API有効化とBotアカウント作成</h3>
+      <ol>
+        <li>検索バーで <strong>Google Sheets API</strong> と <strong>Google Drive API</strong> を検索し、それぞれ有効化します。</li>
+        <li><strong>IAMと管理 > サービスアカウント</strong> で <code>x-post-bot</code> という名前のアカウントを作成します。</li>
+        <li>作成したアカウントの <strong>キー</strong> タブから <strong>JSONキー</strong> を新規作成・ダウンロードします。</li>
+      </ol>
+      
+      <div class="input-group">
+        <label>▼ Service Account JSON (ダウンロードしたファイルの中身を全貼り付け)</label>
+        <textarea id="gcp_json" placeholder='{ "type": "service_account", ... }' data-required="GCP JSONキー"></textarea>
+        
+        <label style="margin-top:12px;">▼ Botのメールアドレス (x-post-bot@...)</label>
+        <input type="text" id="bot_email" placeholder="x-post-bot@project-id.iam.gserviceaccount.com" data-required="Botメールアドレス" />
+      </div>
+    </div>
+
+    <!-- Phase 3: Drive/Sheet -->
+    <div class="card" id="step-sheet">
+      <span class="role-badge role-satchin">Step 3</span>
+      <h2>スプレッドシートと画像の準備</h2>
+      
+      <h3>1. フォルダとシートの作成</h3>
+      <ol>
+        <li>Google Driveに「X投稿用画像」フォルダと、「X投稿管理表」スプレッドシートを作成します。</li>
+        <li>両方とも、<strong>Botのメールアドレス</strong> に対して共有設定（編集者権限）を行います。</li>
+        <li>スプレッドシートの1行目にヘッダーを作成します: <br>
+          <code>id</code>, <code>日付</code>, <code>時間</code>, <code>アカウント</code>, <code>テキスト</code>, <code>画像</code>, <code>ステータス</code>
+        </li>
+      </ol>
+      
+      <div class="input-group">
+        <label>▼ スプレッドシートのURL</label>
+        <input type="text" id="sheet_url" placeholder="https://docs.google.com/spreadsheets/d/..." data-required="スプレッドシートURL" />
+      </div>
+    </div>
+
+    <!-- Phase 4: X Account -->
+    <div class="card" id="step-x">
+      <span class="role-badge role-satchin">Step 4</span>
+      <h2>X (Twitter) アカウントの準備</h2>
+      
+      <h3>1. ログイン情報の用意</h3>
+      <p>エンジニアが認証作業を行うため、各アカウントのログイン情報を入力してください。</p>
+      <div class="input-group">
+        <div class="account-inputs">
+          <input type="text" id="acc_a_id" placeholder="本番A (チャプリ) ID" data-required="本番A ID" />
+          <input type="text" id="acc_a_pw" placeholder="パスワード" data-required="本番A PW" />
+        </div>
+        <div class="account-inputs">
+          <input type="text" id="acc_b_id" placeholder="本番B (ロバミミ) ID" data-required="本番B ID" />
+          <input type="text" id="acc_b_pw" placeholder="パスワード" data-required="本番B PW" />
+        </div>
+        <div class="account-inputs">
+          <input type="text" id="acc_test_id" placeholder="テスト用 ID" data-required="テスト用 ID" />
+          <input type="text" id="acc_test_pw" placeholder="パスワード" data-required="テスト用 PW" />
+        </div>
+      </div>
+
+      <h3>2. API Keyの取得</h3>
+      <p><a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">Developer Portal</a> でアプリを作成し、Keys and tokensを取得してください。</p>
+      <div class="input-group">
+        <label>▼ API Key</label>
+        <input type="text" id="x_api_key" placeholder="API Key" style="margin-bottom:8px;" data-required="X API Key" />
+        <label>▼ API Key Secret</label>
+        <input type="text" id="x_api_secret" placeholder="API Key Secret" data-required="X API Secret" />
+      </div>
+    </div>
+
+    <!-- Phase 5: GitHub Account -->
+    <div class="card" id="step-github">
+      <span class="role-badge role-satchin">Step 5</span>
+      <h2>GitHubアカウントとリポジトリの作成</h2>
+      <p>コードを管理するための「アカウント」と「箱（リポジトリ）」を作成します。<br>
+      MLアドレスで登録するため、さっちんさんが実施してください。</p>
+
+      <h3>1. アカウントの作成</h3>
+      <ol>
+        <li><a href="https://github.com/signup" target="_blank">GitHub Signup</a> にアクセスします。</li>
+        <li><strong>Enter your email:</strong> MLアドレス (<code>x-auto-post-admin@...</code>) を入力します。</li>
+        <li><strong>Create a password:</strong> 任意のパスワードを設定します。<br>
+          <span style="color:#e11d48; font-weight:bold;">※このパスワードはエンジニアに共有するため、下の入力欄にも控えてください。</span>
+        </li>
+        <li><strong>Enter a username:</strong> アカウントIDを決めます（例: <code>cocoloni-x-bot-2024</code> 等）。<br>
+          <small>※これが「ユーザー名」になります。他と被らないユニークな名前が必要です。</small>
+        </li>
+        <li>検証パズルを解き、<strong>Create account</strong> を押します。</li>
+        <li>MLに届いた認証コードを入力して完了させます。</li>
+      </ol>
+
+      <div class="input-group">
+        <label>▼ 設定したGitHubパスワード (エンジニア共有用)</label>
+        <input type="text" id="github_pw" placeholder="設定したパスワードを入力" data-required="GitHubパスワード" />
+      </div>
+
+      <h3>2. リポジトリ（箱）の作成</h3>
+      <ol>
+        <li>ログイン後の画面右上にある <strong>「＋」アイコン</strong> から <strong>New repository</strong> を選びます。</li>
+        <li><strong>Repository name</strong> に <code>x-auto-post</code> と入力します。</li>
+        <li><strong>Public / Private</strong> の選択で、必ず <strong style="color:#e11d48;">Private</strong> を選んでください。<br>
+          <small>※Privateにしないと社外に公開されてしまいます。</small>
+        </li>
+        <li>その他は変更せず、画面下の <strong>Create repository</strong> ボタンを押します。</li>
+        <li>作成後の画面に表示されるURL (例: <code>https://github.com/.../x-auto-post.git</code>) をコピーして、以下に貼り付けてください。</li>
+      </ol>
+
+      <div class="input-group">
+        <label>▼ 作成されたリポジトリURL</label>
+        <input type="text" id="repo_url" placeholder="https://github.com/ユーザー名/x-auto-post.git" data-required="リポジトリURL" />
+      </div>
+
+      <h3>3. 開発用トークンの発行</h3>
+      <p>エンジニアがプログラムをアップロードするために必要な「パスワード代わりの鍵（トークン）」を発行します。</p>
+      <ol>
+        <li>画面右上のアイコン > <strong>Settings</strong> > 左メニュー最下部の <strong>Developer settings</strong> を開きます。</li>
+        <li><strong>Personal access tokens</strong> > <strong>Tokens (classic)</strong> を選び、<strong>Generate new token (classic)</strong> を押します。</li>
+        <li><strong>Note</strong> に <code>upload-key</code> と入力し、<strong>Expiration</strong>（有効期限）を <strong>No expiration</strong>（無期限）にします。</li>
+        <li><strong>Select scopes</strong> で <strong>repo</strong>（一番上）にチェックを入れます。</li>
+        <li>画面下の <strong>Generate token</strong> を押します。</li>
+        <li><code>ghp_</code> から始まる文字列が表示されるので、コピーして以下に貼り付けてください。<br>
+        <span style="color:#e11d48; font-weight:bold;">※この画面を閉じると二度と表示されないので注意してください。</span></li>
+      </ol>
+
+      <div class="input-group">
+        <label>▼ 発行されたGitHubトークン (ghp_...)</label>
+        <input type="text" id="github_token" placeholder="ghp_xxxxxxxxxxxx" data-required="GitHubトークン" />
+      </div>
+    </div>
+
+    <!-- Phase 6: Handover -->
+    <div class="card handover-area">
+      <span class="role-badge role-satchin" style="background:white; color:#1e293b;">Last Step</span>
+      <h2 style="color:white;">エンジニアへの引継ぎデータの作成</h2>
+      <p style="color:#cbd5e1;">ここまで入力した情報（Xのログイン情報、API Key、GCP設定値など）が以下に自動的にまとめられます。<br>
+      <strong>このデータをコピーして、チャットツール等でエンジニアに送付してください。</strong><br>
+      <small>※エンジニアはこのデータを使って設定作業を行います。</small></p>
+      
+      <textarea id="handover_data" style="width:100%; height:200px;" readonly></textarea>
+      <div style="margin-top:12px;">
+        <button class="btn" onclick="copyHandoverData()">クリップボードにコピー</button>
+      </div>
+    </div>
+
+  </div><!-- End satchin tab -->
+
+
+  <!-- ==========================================
+       エンジニア様用タブ
+       ========================================== -->
+  <div id="tab-engineer" class="tab-content">
+    
+    <div class="card" style="background:#1e293b; border-color:#334155; color:white;">
+      <h2 style="color:white;">🔧 引継ぎデータの読込</h2>
+      <p style="color:#cbd5e1;">さっちん様から受領したデータをここに貼り付けてください。<br>
+      自動的に入力欄へ反映されます。</p>
+      <textarea id="import_data" placeholder="ここにデータを貼り付け..." style="width:100%; height:100px; background:#0f1724; border:1px solid #334155; color:#4ade80; padding:10px; border-radius:6px; font-family:monospace;"></textarea>
+      <button class="btn" style="margin-top:12px;" onclick="importHandoverData()">データを読み込む</button>
+    </div>
+
+    <div class="card">
+      <span class="role-badge role-engineer">Step 1</span>
+      <h2>コードの実装とPush</h2>
+      
+      <p>さっちん様が作成したリポジトリに、Botのプログラムをアップロードします。</p>
+
+      <h3>1. プロジェクトの準備とファイル配置</h3>
+      <pre><code># ディレクトリ作成
+mkdir x-auto-post && cd x-auto-post
+git init
+
+# 以下の構成になるようにファイルを作成してください
+x-auto-post/
+├── .github/
+│   └── workflows/
+│       ├── manual-test-post.yml
+│       └── scheduled-post.yml
+├── .gitignore
+├── package.json
+├── post_to_x_api.js
+└── get_twitter_tokens.js</code></pre>
+
+      <div style="margin-bottom:20px;">
+        <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
+          <summary style="cursor:pointer; font-weight:bold;">📄 package.json</summary>
+          <pre><code>{
+  "name": "x-auto-post",
+  "version": "2.0.0",
+  "description": "X (Twitter) 自動投稿システム",
+  "main": "post_to_x_api.js",
+  "scripts": {
+    "start": "node post_to_x_api.js check",
+    "test-post": "node post_to_x_api.js test",
+    "get-tokens": "node get_twitter_tokens.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.1",
+    "googleapis": "^128.0.0",
+    "twitter-api-v2": "^1.28.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0"
+  }
+}</code></pre>
+        </details>
+
+        <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
+          <summary style="cursor:pointer; font-weight:bold;">📄 .gitignore</summary>
+          <pre><code>node_modules/
+.env
+.DS_Store</code></pre>
+        </details>
+
+        <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
+          <summary style="cursor:pointer; font-weight:bold;">📄 post_to_x_api.js (メイン処理)</summary>
+          <pre><code>// ここに post_to_x_api.js の内容をコピペしてください
+// (ファイル数が多いのでリポジトリから取得推奨ですが、必要ならここに全コード載せます)</code></pre>
+        </details>
+        
+        <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
+          <summary style="cursor:pointer; font-weight:bold;">📄 get_twitter_tokens.js (トークン取得用)</summary>
+          <pre><code>// ここに get_twitter_tokens.js の内容をコピペしてください</code></pre>
+        </details>
+
+        <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
+          <summary style="cursor:pointer; font-weight:bold;">📄 .github/workflows/manual-test-post.yml</summary>
+          <pre><code>name: Manual Test Post
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Test Post
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN_A: ${{ secrets.X_ACCESS_TOKEN_A }}
+          X_ACCESS_SECRET_A: ${{ secrets.X_ACCESS_SECRET_A }}
+          X_ACCESS_TOKEN_B: ${{ secrets.X_ACCESS_TOKEN_B }}
+          X_ACCESS_SECRET_B: ${{ secrets.X_ACCESS_SECRET_B }}
+          X_ACCESS_TOKEN_TEST: ${{ secrets.X_ACCESS_TOKEN_TEST }}
+          X_ACCESS_SECRET_TEST: ${{ secrets.X_ACCESS_SECRET_TEST }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: npm run test-post</code></pre>
+        </details>
+
+        <details style="margin-bottom:8px; background:#f1f5f9; border-radius:6px; padding:8px;">
+          <summary style="cursor:pointer; font-weight:bold;">📄 .github/workflows/scheduled-post.yml</summary>
+          <pre><code>name: Scheduled Post
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-and-post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Post Check
+        env:
+          SPREADSHEET_ID: ${{ secrets.SPREADSHEET_ID }}
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN_A: ${{ secrets.X_ACCESS_TOKEN_A }}
+          X_ACCESS_SECRET_A: ${{ secrets.X_ACCESS_SECRET_A }}
+          X_ACCESS_TOKEN_B: ${{ secrets.X_ACCESS_TOKEN_B }}
+          X_ACCESS_SECRET_B: ${{ secrets.X_ACCESS_SECRET_B }}
+          X_ACCESS_TOKEN_TEST: ${{ secrets.X_ACCESS_TOKEN_TEST }}
+          X_ACCESS_SECRET_TEST: ${{ secrets.X_ACCESS_SECRET_TEST }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+        run: npm start</code></pre>
+        </details>
+      </div>
+
+      <pre><code># 依存関係のインストール
+npm install</code></pre>
+
+      <h3>2. GitHubへのPush</h3>
+      <p>以下のコマンドを実行して、コードをアップロードします。<br>
+      ※認証を求められた場合は、引継ぎデータの <strong>[GITHUB_INFO]</strong> にあるIDを使用し、<strong>パスワード欄には「トークン」を貼り付けてください。</strong></p>
+      
+      <div class="input-group" style="margin-bottom:16px;">
+         <label>▼ リポジトリURL (自動入力)</label>
+         <input type="text" id="repo_url_display" readonly style="background:#e2e8f0; color:#64748b; margin-bottom:8px;" />
+         
+         <label>▼ 認証用トークン (自動入力: これをパスワードとして使用)</label>
+         <div style="display:flex; gap:8px;">
+           <input type="text" id="github_token_display" readonly style="background:#e2e8f0; color:#64748b;" />
+           <button class="btn btn-copy" onclick="copy(document.getElementById('github_token_display').value)">コピー</button>
+         </div>
+      </div>
+
+      <pre><code>git add .
+git commit -m "Initial commit"
+git branch -M main
+
+# リモート登録 (URLは上記のものを使用)
+git remote add origin <span id="repo_url_cmd">https://github.com/...</span>
+
+git push -u origin main</code></pre>
+    </div>
+
+    <div class="card">
+      <span class="role-badge role-engineer">Step 2</span>
+      <h2>認証情報の登録 (GitHub Secrets)</h2>
+      
+      <h3>1. アクセストークンの取得</h3>
+      <p><code>npm run get-tokens</code> を実行し、以下の認証情報を使って各アカウントのトークンを取得してください。</p>
+      
+      <div class="input-group" style="background:#1e293b; color:#fff; margin-bottom:16px;">
+        <pre id="login_info_display" style="margin:0; background:transparent; color:#4ade80;">(データ未読込)</pre>
+      </div>
+
+      <div class="input-group">
+        <label>▼ 本番A (チャプリ)</label>
+        <div class="secret-val-wrap">
+          <input type="text" id="token_a" placeholder="Access Token" />
+          <input type="text" id="secret_a" placeholder="Secret" />
+        </div>
+        <label style="margin-top:8px;">▼ 本番B (ロバミミ)</label>
+        <div class="secret-val-wrap">
+          <input type="text" id="token_b" placeholder="Access Token" />
+          <input type="text" id="secret_b" placeholder="Secret" />
+        </div>
+        <label style="margin-top:8px;">▼ テスト用</label>
+        <div class="secret-val-wrap">
+          <input type="text" id="token_test" placeholder="Access Token" />
+          <input type="text" id="secret_test" placeholder="Secret" />
+        </div>
+      </div>
+
+      <h3>2. Secretsへの登録</h3>
+      <p>GitHub Settings > Secrets > Actions に以下を登録します。</p>
+      
+      <div id="secrets_list_container">
+        <!-- Generated via JS -->
+      </div>
+    </div>
+
+  </div><!-- End engineer tab -->
+
+  <!-- ステータスバー -->
+  <div id="status_bar" class="status-bar">
+    <div class="status-header">
+      <span class="status-title">📝 入力状況</span>
+      <span class="status-percent" id="status_percent">0%</span>
+    </div>
+    
+    <div class="progress-container">
+      <div class="progress-bg">
+        <div class="progress-fill" id="progress_fill"></div>
+      </div>
+      <div class="runner" id="runner">🐶</div>
+      <div class="goal" id="goal">🎁</div>
+    </div>
+
+    <div class="status-msg" id="status_msg">未入力の項目があります</div>
+    <div class="missing-list" id="missing_list"></div>
+  </div>
+
+  <footer>
+    X Auto Post System Setup Guide
+  </footer>
+
+</div>
+
+<script>
+// --- タブ制御 ---
+function showTab(role) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + role).classList.add('active');
+  // ボタンのアクティブ状態更新
+  const btns = document.querySelectorAll('.tab-btn');
+  if(role === 'satchin') {
+    btns[0].classList.add('active');
+    document.getElementById('status_bar').classList.add('visible');
+  } else {
+    btns[1].classList.add('active');
+    document.getElementById('status_bar').classList.remove('visible');
+  }
+}
+
+// --- データ管理 ---
+const fields = [
+  'ml_address', 'gcp_json', 'bot_email', 'sheet_url', 
+  'acc_a_id', 'acc_a_pw', 'acc_b_id', 'acc_b_pw', 'acc_test_id', 'acc_test_pw',
+  'x_api_key', 'x_api_secret',
+  'github_pw', 'repo_url', 'github_token',
+  'token_a', 'secret_a', 'token_b', 'secret_b', 'token_test', 'secret_test'
+];
+
+window.addEventListener('DOMContentLoaded', () => {
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if(el) {
+      const saved = localStorage.getItem('xbot_v3_' + id);
+      if(saved) el.value = saved;
+      
+      el.addEventListener('input', () => {
+        localStorage.setItem('xbot_v3_' + id, el.value);
+        refreshData();
+      });
+    }
+  });
+  refreshData();
+  showTab('satchin'); // 初期表示
+});
+
+function refreshData() {
+  updateHandoverText();
+  updateEngineerView();
+  updateStatus(); // ステータス更新
+}
+
+function updateStatus() {
+  const requiredIds = [
+    'ml_address', 'gcp_json', 'bot_email', 'sheet_url', 
+    'acc_a_id', 'acc_a_pw', 'acc_b_id', 'acc_b_pw', 'acc_test_id', 'acc_test_pw',
+    'x_api_key', 'x_api_secret', 'github_pw', 'repo_url', 'github_token'
+  ];
+  
+  let filledCount = 0;
+  let missing = [];
+  
+  requiredIds.forEach(id => {
+    const el = document.getElementById(id);
+    const val = el.value.trim();
+    const group = el.closest('.input-group');
+    
+    if(val) {
+      filledCount++;
+      if(group) group.classList.add('filled');
+    } else {
+      if(group) group.classList.remove('filled');
+      missing.push(el.getAttribute('data-required') || id);
+    }
+  });
+
+  const percent = Math.round((filledCount / requiredIds.length) * 100);
+  document.getElementById('status_percent').innerText = percent + '%';
+  document.getElementById('progress_fill').style.width = percent + '%';
+  
+  // キャラクター移動 (0%〜100%)
+  const runner = document.getElementById('runner');
+  const goal = document.getElementById('goal');
+  
+  // うさぎの位置更新
+  runner.style.left = percent + '%';
+
+  const msgEl = document.getElementById('status_msg');
+  const listEl = document.getElementById('missing_list');
+  
+  if(percent === 100) {
+    msgEl.innerText = "🎉 すべての入力が完了しました！";
+    msgEl.style.color = "#059669";
+    msgEl.style.fontWeight = "bold";
+    listEl.innerHTML = "";
+    
+    // ゴール演出
+    goal.innerHTML = "🎉"; 
+    goal.style.animation = "pop 0.6s ease";
+    
+    // 犬演出 (喜び)
+    runner.innerHTML = "🐶"; // 完了時
+    // 少し左にずらしてゴールと被らないようにするならここを調整
+    runner.style.left = "calc(100% - 25px)"; 
+    runner.style.animation = "bounce 0.3s infinite alternate"; // 早く跳ねる
+  } else {
+    msgEl.innerText = `残り ${missing.length} 項目が未入力です`;
+    msgEl.style.color = "#64748b";
+    listEl.innerHTML = missing.map(m => `<div class="missing-item">${m}</div>`).join('');
+    
+    // 通常状態
+    goal.innerHTML = "🎁";
+    goal.style.animation = "none";
+    runner.innerHTML = "🐶"; // 走る
+    runner.style.animation = "bounce 0.5s infinite alternate";
+  }
+}
+
+function updateHandoverText() {
+  const get = (id) => document.getElementById(id)?.value || '';
+  
+  let txt = "【X自動投稿Bot 引継ぎデータ】\nこのデータをエンジニア様用タブの読込欄に貼り付けてください。\n\n";
+  
+  txt += `[LOGIN_INFO]\nAccount A: ${get('acc_a_id')} / ${get('acc_a_pw')}\nAccount B: ${get('acc_b_id')} / ${get('acc_b_pw')}\nAccount TEST: ${get('acc_test_id')} / ${get('acc_test_pw')}\n\n`;
+  
+  txt += `[GITHUB_INFO]\nPassword: ${get('github_pw')}\nToken: ${get('github_token')}\nRepo URL: ${get('repo_url')}\n\n`;
+
+  const saveKeys = ['ml_address', 'gcp_json', 'bot_email', 'sheet_url', 'x_api_key', 'x_api_secret'];
+  saveKeys.forEach(k => {
+    txt += `[${k.toUpperCase()}]\n${get(k)}\n\n`;
+  });
+
+  document.getElementById('handover_data').value = txt;
+}
+
+function updateEngineerView() {
+  const get = (id) => document.getElementById(id)?.value || '';
+  
+  // ログイン情報表示
+  const info = document.getElementById('login_info_display');
+  if(get('acc_a_id')) {
+    info.innerText = `本番A: ${get('acc_a_id')} / ${get('acc_a_pw')}\n本番B: ${get('acc_b_id')} / ${get('acc_b_pw')}\nテスト: ${get('acc_test_id')} / ${get('acc_test_pw')}`;
+  }
+
+  // リポジトリURL表示
+  const repoUrl = get('repo_url');
+  if(repoUrl) {
+    const disp = document.getElementById('repo_url_display');
+    if(disp) disp.value = repoUrl;
+    
+    const cmd = document.getElementById('repo_url_cmd');
+    if(cmd) cmd.innerText = repoUrl;
+  }
+  
+  // トークン表示
+  const token = get('github_token');
+  if(token) {
+    const disp = document.getElementById('github_token_display');
+    if(disp) disp.value = token;
+  }
+
+  // Secretsリスト生成
+  let sheetId = '';
+  const match = get('sheet_url').match(/\/d\/([a-zA-Z0-9-_]+)/);
+  if(match) sheetId = match[1];
+
+  const secrets = [
+    { k: 'GOOGLE_SERVICE_ACCOUNT_JSON', v: get('gcp_json') },
+    { k: 'SPREADSHEET_ID', v: sheetId },
+    { k: 'X_API_KEY', v: get('x_api_key') },
+    { k: 'X_API_SECRET', v: get('x_api_secret') },
+    { k: 'X_ACCESS_TOKEN_A', v: get('token_a') },
+    { k: 'X_ACCESS_SECRET_A', v: get('secret_a') },
+    { k: 'X_ACCESS_TOKEN_B', v: get('token_b') },
+    { k: 'X_ACCESS_SECRET_B', v: get('secret_b') },
+    { k: 'X_ACCESS_TOKEN_TEST', v: get('token_test') },
+    { k: 'X_ACCESS_SECRET_TEST', v: get('secret_test') },
+  ];
+
+  const container = document.getElementById('secrets_list_container');
+  container.innerHTML = secrets.map(s => `
+    <div class="secret-item">
+      <div class="secret-info">
+        <div class="secret-key">${s.k}</div>
+        <div class="secret-val-wrap">
+          <input type="text" value="${s.v}" readonly onclick="this.select()">
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:4px;">
+        <button class="btn btn-copy" onclick="copy('${s.k}')">名前コピー</button>
+        <button class="btn btn-copy" onclick="copy(\`${s.v.replace(/`/g, '\\`')}\`)">値コピー</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function importHandoverData() {
+  const txt = document.getElementById('import_data').value;
+  if(!txt) return;
+
+  const parse = (tag) => {
+    const m = txt.match(new RegExp(`\\[${tag}\\]\\n(.*?)(?=\\n\\n|\\[|$)`, 's'));
+    return m ? m[1].trim() : '';
+  };
+
+  // シンプルな項目の復元
+  const map = {
+    'ML_ADDRESS': 'ml_address',
+    'GCP_JSON': 'gcp_json',
+    'BOT_EMAIL': 'bot_email',
+    'SHEET_URL': 'sheet_url',
+    'X_API_KEY': 'x_api_key',
+    'X_API_SECRET': 'x_api_secret'
+  };
+  
+  for(let k in map) {
+    const val = parse(k);
+    if(val) document.getElementById(map[k]).value = val;
+  }
+
+  // GitHub情報の復元
+  const ghInfo = parse('GITHUB_INFO');
+  if(ghInfo) {
+    const pwMatch = ghInfo.match(/Password: (.*)/);
+    if(pwMatch) document.getElementById('github_pw').value = pwMatch[1];
+    const tokenMatch = ghInfo.match(/Token: (.*)/);
+    if(tokenMatch) document.getElementById('github_token').value = tokenMatch[1];
+    const urlMatch = ghInfo.match(/Repo URL: (.*)/);
+    if(urlMatch) document.getElementById('repo_url').value = urlMatch[1];
+  }
+
+  // ログイン情報の復元
+  const loginTxt = parse('LOGIN_INFO');
+  if(loginTxt) {
+    loginTxt.split('\n').forEach(line => {
+      if(line.includes('Account A')) {
+        const p = line.split(': ')[1].split(' / ');
+        document.getElementById('acc_a_id').value = p[0];
+        document.getElementById('acc_a_pw').value = p[1];
+      }
+      if(line.includes('Account B')) {
+        const p = line.split(': ')[1].split(' / ');
+        document.getElementById('acc_b_id').value = p[0];
+        document.getElementById('acc_b_pw').value = p[1];
+      }
+      if(line.includes('Account TEST')) {
+        const p = line.split(': ')[1].split(' / ');
+        document.getElementById('acc_test_id').value = p[0];
+        document.getElementById('acc_test_pw').value = p[1];
+      }
+    });
+  }
+
+  refreshData();
+  alert('データを読み込みました！\n下の欄に情報が反映されていることを確認してください。');
+}
+
+function copyHandoverData() {
+  const el = document.getElementById('handover_data');
+  el.select();
+  document.execCommand('copy');
+  alert('コピーしました！');
+}
+
+function copy(txt) {
+  if(!txt) return;
+  const t = document.createElement('textarea');
+  t.value = txt;
+  document.body.appendChild(t);
+  t.select();
+  document.execCommand('copy');
+  document.body.removeChild(t);
+}
+</script>
+
+</body>
+</html>

@@ -32,4 +32,3 @@ jobs:
           X_ACCESS_SECRET_TEST: ${{ secrets.X_ACCESS_SECRET_TEST }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
         run: npm run test-post
-
