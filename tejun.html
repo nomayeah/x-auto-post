@@ -422,12 +422,12 @@
       <p>エンジニアが認証作業を行うため、各アカウントのログイン情報を入力してください。</p>
       <div class="input-group">
         <div class="account-inputs">
-          <input type="text" id="acc_a_id" placeholder="本番A (チャプリ) ID" data-required="本番A ID" />
-          <input type="text" id="acc_a_pw" placeholder="パスワード" data-required="本番A PW" />
+          <input type="text" id="acc_a_id" placeholder="チャプリ ID" data-required="チャプリ ID" />
+          <input type="text" id="acc_a_pw" placeholder="パスワード" data-required="チャプリ PW" />
         </div>
         <div class="account-inputs">
-          <input type="text" id="acc_b_id" placeholder="本番B (ロバミミ) ID" data-required="本番B ID" />
-          <input type="text" id="acc_b_pw" placeholder="パスワード" data-required="本番B PW" />
+          <input type="text" id="acc_b_id" placeholder="ロバミミ ID" data-required="ロバミミ ID" />
+          <input type="text" id="acc_b_pw" placeholder="パスワード" data-required="ロバミミ PW" />
         </div>
         <div class="account-inputs">
           <input type="text" id="acc_test_id" placeholder="テスト用 ID" data-required="テスト用 ID" />
@@ -716,14 +716,14 @@ git push -u origin main</code></pre>
       <small>※ブラウザでアカウントを切り替えながら、<code>npm run get-tokens</code> を実行します。</small></p>
 
       <div style="margin-top:24px;">
-        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">① 本番A (チャプリ) の設定</h4>
+        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">① チャプリ の設定</h4>
         <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>ブラウザで <strong>本番Aのアカウント</strong> にログインします。</li>
+          <li>ブラウザで <strong>チャプリのアカウント</strong> にログインします。</li>
           <li><code>npm run get-tokens</code> を実行し、認証してトークンを取得します。</li>
           <li>表示された <strong>Access Token</strong> と <strong>Secret</strong> を以下に入力してください。</li>
         </ol>
         <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
-          <label>▼ 本番A (チャプリ) Token / Secret</label>
+          <label>▼ チャプリ Token / Secret</label>
           <div class="secret-val-wrap">
             <input type="text" id="token_a" placeholder="Access Token" />
             <input type="text" id="secret_a" placeholder="Secret" />
@@ -732,14 +732,14 @@ git push -u origin main</code></pre>
       </div>
 
       <div style="margin-top:24px;">
-        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">② 本番B (ロバミミ) の設定</h4>
+        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">② ロバミミ の設定</h4>
         <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
-          <li>ブラウザで <strong>本番Bのアカウント</strong> に切り替えます（ログアウトしてログイン）。</li>
+          <li>ブラウザで <strong>ロバミミのアカウント</strong> に切り替えます（ログアウトしてログイン）。</li>
           <li>再度 <code>npm run get-tokens</code> を実行し、認証します。</li>
           <li>表示されたトークンを以下に入力してください。</li>
         </ol>
         <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
-          <label>▼ 本番B (ロバミミ) Token / Secret</label>
+          <label>▼ ロバミミ Token / Secret</label>
           <div class="secret-val-wrap">
             <input type="text" id="token_b" placeholder="Access Token" />
             <input type="text" id="secret_b" placeholder="Secret" />
@@ -920,7 +920,7 @@ function updateHandoverText() {
   
   let txt = "【X自動投稿Bot 引継ぎデータ】\nこのデータをエンジニア様用タブの読込欄に貼り付けてください。\n\n";
   
-  txt += `[LOGIN_INFO]\nAccount A: ${get('acc_a_id')} / ${get('acc_a_pw')}\nAccount B: ${get('acc_b_id')} / ${get('acc_b_pw')}\nAccount TEST: ${get('acc_test_id')} / ${get('acc_test_pw')}\n\n`;
+  txt += `[LOGIN_INFO]\nAccount チャプリ: ${get('acc_a_id')} / ${get('acc_a_pw')}\nAccount ロバミミ: ${get('acc_b_id')} / ${get('acc_b_pw')}\nAccount TEST: ${get('acc_test_id')} / ${get('acc_test_pw')}\n\n`;
   
   txt += `[GITHUB_INFO]\nPassword: ${get('github_pw')}\nToken: ${get('github_token')}\nRepo URL: ${get('repo_url')}\n\n`;
 
@@ -1026,12 +1026,12 @@ function importHandoverData() {
   const loginTxt = parse('LOGIN_INFO');
   if(loginTxt) {
     loginTxt.split('\n').forEach(line => {
-      if(line.includes('Account A')) {
+      if(line.includes('Account チャプリ')) {
         const p = line.split(': ')[1].split(' / ');
         document.getElementById('acc_a_id').value = p[0];
         document.getElementById('acc_a_pw').value = p[1];
       }
-      if(line.includes('Account B')) {
+      if(line.includes('Account ロバミミ')) {
         const p = line.split(': ')[1].split(' / ');
         document.getElementById('acc_b_id').value = p[0];
         document.getElementById('acc_b_pw').value = p[1];
