@@ -712,29 +712,58 @@ git push -u origin main</code></pre>
       <h2>認証情報の登録 (GitHub Secrets)</h2>
       
       <h3>1. アクセストークンの取得</h3>
-      <p><code>npm run get-tokens</code> を実行し、以下の認証情報を使って各アカウントのトークンを取得してください。</p>
-      
-      <div class="input-group" style="background:#1e293b; color:#fff; margin-bottom:16px;">
-        <pre id="login_info_display" style="margin:0; background:transparent; color:#4ade80;">(データ未読込)</pre>
+      <p>各アカウントごとにトークンを発行し、それぞれの欄に入力してください。<br>
+      <small>※ブラウザでアカウントを切り替えながら、<code>npm run get-tokens</code> を実行します。</small></p>
+
+      <div style="margin-top:24px;">
+        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">① 本番A (チャプリ) の設定</h4>
+        <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
+          <li>ブラウザで <strong>本番Aのアカウント</strong> にログインします。</li>
+          <li><code>npm run get-tokens</code> を実行し、認証してトークンを取得します。</li>
+          <li>表示された <strong>Access Token</strong> と <strong>Secret</strong> を以下に入力してください。</li>
+        </ol>
+        <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
+          <label>▼ 本番A (チャプリ) Token / Secret</label>
+          <div class="secret-val-wrap">
+            <input type="text" id="token_a" placeholder="Access Token" />
+            <input type="text" id="secret_a" placeholder="Secret" />
+          </div>
+        </div>
       </div>
 
-      <div class="input-group">
-        <label>▼ 本番A (チャプリ)</label>
-        <div class="secret-val-wrap">
-          <input type="text" id="token_a" placeholder="Access Token" />
-          <input type="text" id="secret_a" placeholder="Secret" />
-        </div>
-        <label style="margin-top:8px;">▼ 本番B (ロバミミ)</label>
-        <div class="secret-val-wrap">
-          <input type="text" id="token_b" placeholder="Access Token" />
-          <input type="text" id="secret_b" placeholder="Secret" />
-        </div>
-        <label style="margin-top:8px;">▼ テスト用</label>
-        <div class="secret-val-wrap">
-          <input type="text" id="token_test" placeholder="Access Token" />
-          <input type="text" id="secret_test" placeholder="Secret" />
+      <div style="margin-top:24px;">
+        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">② 本番B (ロバミミ) の設定</h4>
+        <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
+          <li>ブラウザで <strong>本番Bのアカウント</strong> に切り替えます（ログアウトしてログイン）。</li>
+          <li>再度 <code>npm run get-tokens</code> を実行し、認証します。</li>
+          <li>表示されたトークンを以下に入力してください。</li>
+        </ol>
+        <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
+          <label>▼ 本番B (ロバミミ) Token / Secret</label>
+          <div class="secret-val-wrap">
+            <input type="text" id="token_b" placeholder="Access Token" />
+            <input type="text" id="secret_b" placeholder="Secret" />
+          </div>
         </div>
       </div>
+
+      <div style="margin-top:24px; margin-bottom:24px;">
+        <h4 style="border-bottom:2px solid #e2e8f0; padding-bottom:4px; margin-bottom:12px; color:#334155;">③ テスト用アカウントの設定</h4>
+        <ol style="font-size:14px; color:#475569; margin-bottom:12px;">
+          <li>ブラウザで <strong>テスト用アカウント</strong> に切り替えます。</li>
+          <li>再度 <code>npm run get-tokens</code> を実行し、認証します。</li>
+          <li>表示されたトークンを以下に入力してください。</li>
+        </ol>
+        <div class="input-group" style="background:#f0f9ff; border-color:#bae6fd;">
+          <label>▼ テスト用 Token / Secret</label>
+          <div class="secret-val-wrap">
+            <input type="text" id="token_test" placeholder="Access Token" />
+            <input type="text" id="secret_test" placeholder="Secret" />
+          </div>
+        </div>
+      </div>
+
+
 
       <h3>2. Secretsへの登録</h3>
       <p>GitHub Settings > Secrets > Actions に以下を登録します。</p>
@@ -906,12 +935,6 @@ function updateHandoverText() {
 function updateEngineerView() {
   const get = (id) => document.getElementById(id)?.value || '';
   
-  // ログイン情報表示
-  const info = document.getElementById('login_info_display');
-  if(get('acc_a_id')) {
-    info.innerText = `本番A: ${get('acc_a_id')} / ${get('acc_a_pw')}\n本番B: ${get('acc_b_id')} / ${get('acc_b_pw')}\nテスト: ${get('acc_test_id')} / ${get('acc_test_pw')}`;
-  }
-
   // リポジトリURL表示
   const repoUrl = get('repo_url');
   if(repoUrl) {
