@@ -483,13 +483,45 @@
         </div>
       </div>
 
-      <h3>2. API Keyの取得</h3>
-      <p><a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">Developer Portal</a> でアプリを作成し、Keys and tokensを取得してください。</p>
+      <h3>2. API Keyの取得とアプリ設定</h3>
+      <p>Developer Portal でアプリを作成し、権限設定を行ってからKeyを取得します。<br>
+      <small>※ここが少し複雑なので、手順通りに進めてください。</small></p>
+
+      <ol>
+        <li><a href="https://developer.twitter.com/en/portal/dashboard" target="_blank">Developer Portal</a> にアクセスします。</li>
+        <li>左メニューの <strong>Projects & Apps</strong> からアプリ（またはProject）を作成します。<br>
+        <small>※初めての場合は "Create Project" → "Create App" と進みます。名前は適当でOKです。</small></li>
+        
+        <li class="mt-4"><strong>User authentication settings (認証設定)</strong> を行います:
+          <ul>
+            <li>アプリの設定画面で <strong>User authentication settings</strong> の <strong>Edit</strong> (または Set up) を押します。</li>
+            <li><strong>App permissions</strong>: <strong class="text-danger">Read and write</strong> を選択します。<br>
+            <small>※これがないと投稿できません。</small></li>
+            <li><strong>Type of App</strong>: <strong>Web App, Automated App or Bot</strong> を選択。</li>
+            <li><strong>App info</strong>:
+              <ul>
+                <li>Callback URI / Redirect URL: <code>http://127.0.0.1:3000/callback</code> <span class="text-danger">※一字一句正確に！</span></li>
+                <li>Website URL: <code>https://twitter.com</code> (何でもOK)</li>
+              </ul>
+            </li>
+            <li><strong>Save</strong> を押して保存します。</li>
+          </ul>
+        </li>
+
+        <li class="mt-4"><strong>Keys and tokens</strong> タブを開きます:
+          <ul>
+            <li><strong>Consumer Keys</strong> の横にある <strong>Regenerate</strong> (または Generate) を押します。</li>
+            <li>表示された <strong>API Key</strong> と <strong>API Key Secret</strong> をコピーして以下に貼り付けます。<br>
+            <small>※Access TokenやBearer Tokenはここでは使いません。</small></li>
+          </ul>
+        </li>
+      </ol>
+
       <div class="input-group">
         <label>▼ API Key</label>
-        <input type="text" id="x_api_key" placeholder="API Key" class="mb-2" data-required="X API Key" />
+        <input type="text" id="x_api_key" placeholder="API Key (25文字くらい)" class="mb-2" data-required="X API Key" />
         <label>▼ API Key Secret</label>
-        <input type="text" id="x_api_secret" placeholder="API Key Secret" data-required="X API Secret" />
+        <input type="text" id="x_api_secret" placeholder="API Key Secret (50文字くらい)" data-required="X API Secret" />
       </div>
     </div>
 
@@ -501,33 +533,65 @@
       MLアドレスで登録するため、さっちんさんが実施してください。</p>
 
       <h3>1. アカウントの作成</h3>
+      <p>以下の手順で、画面の指示に従って入力を進めてください。</p>
       <ol>
-        <li><a href="https://github.com/signup" target="_blank">GitHub Signup</a> にアクセスします。</li>
-        <li><strong>Enter your email:</strong> MLアドレス (<code>x-auto-post-admin@...</code>) を入力します。</li>
-        <li><strong>Create a password:</strong> 任意のパスワードを設定します。<br>
-          <span class="text-danger">※このパスワードはエンジニアに共有するため、下の入力欄にも控えてください。</span>
+        <li><a href="https://github.com/signup" target="_blank">GitHub Signup (アカウント作成画面)</a> にアクセスします。</li>
+        
+        <li class="mt-4"><strong>Enter your email (メールアドレス)</strong><br>
+          Step 1で作成した <strong>MLのアドレス</strong> を入力して <code>Continue</code> を押します。<br>
+          <small>例: <code>x-auto-post-admin@cocoloni.com</code></small>
         </li>
-        <li><strong>Enter a username:</strong> アカウントIDを決めます（例: <code>cocoloni-x-bot-2024</code> 等）。<br>
-          <small>※これが「ユーザー名」になります。他と被らないユニークな名前が必要です。</small>
+
+        <li class="mt-4"><strong>Create a password (パスワード)</strong><br>
+          Bot管理用のパスワードを決めて入力し、<code>Continue</code> を押します。<br>
+          <span class="text-danger">※後でエンジニアに共有するため、忘れないように下の入力欄に控えてください。</span>
         </li>
-        <li>検証パズルを解き、<strong>Create account</strong> を押します。</li>
-        <li>MLに届いた認証コードを入力して完了させます。</li>
+        
+        <li class="mt-4"><strong>Enter a username (ユーザー名)</strong><br>
+          Botのアカウント名を決めて入力し、<code>Continue</code> を押します。<br>
+          例: <code>cocoloni-x-bot-2025</code> や <code>cp-rb-bot</code> など<br>
+          <small>※「Username is available」と緑色になればOKです。「not available」の場合は数字などを足してください。</small>
+        </li>
+
+        <li class="mt-4"><strong>Email preferences</strong><br>
+          「Receive product updates...」のチェックは外して（空欄のまま） <code>Continue</code> を押します。
+        </li>
+        
+        <li class="mt-4"><strong>Verify account (検証)</strong><br>
+          「Verify」ボタンを押し、パズルを解いて（矢印で動物の向きを合わせる等）、<code>Create account</code> を押します。
+        </li>
+        
+        <li class="mt-4"><strong>Enter code (認証コード)</strong><br>
+          MLのアドレス宛に「GitHub」からメールが届きます。<br>
+          メール内の数字コードを入力して完了です。
+        </li>
       </ol>
 
       <div class="input-group">
-        <label>▼ 設定したGitHubパスワード (エンジニア共有用)</label>
+        <label>▼ 登録したメールアドレス</label>
+        <input type="text" id="github_email" placeholder="登録したメールアドレス (ML)" class="mb-2" data-required="GitHubメール" />
+        <label>▼ 設定したパスワード (エンジニア共有用)</label>
         <input type="text" id="github_pw" placeholder="設定したパスワードを入力" data-required="GitHubパスワード" />
       </div>
 
       <h3>2. リポジトリ（箱）の作成</h3>
+      <p>エンジニアがコードを入れるための箱（リポジトリ）を作ります。</p>
       <ol>
-        <li>ログイン後の画面右上にある <strong>「＋」アイコン</strong> から <strong>New repository</strong> を選びます。</li>
-        <li><strong>Repository name</strong> に <code>x-auto-post</code> と入力します。</li>
-        <li><strong>Public / Private</strong> の選択で、必ず <strong class="text-danger">Private</strong> を選んでください。<br>
-          <small>※Privateにしないと社外に公開されてしまいます。</small>
-        </li>
-        <li>その他は変更せず、画面下の <strong>Create repository</strong> ボタンを押します。</li>
-        <li>作成後の画面に表示されるURL (例: <code>https://github.com/.../x-auto-post.git</code>) をコピーして、以下に貼り付けてください。</li>
+        <li>ログイン後の画面右上にある <strong>「＋」アイコン</strong> をクリックし、<strong>New repository</strong> を選びます。</li>
+        <li class="mt-4"><strong>Repository name</strong><br>
+        <code>x-auto-post</code> と入力します。<br>
+        <small>※緑色のチェックマークが出ればOKです。</small></li>
+        
+        <li class="mt-4"><strong>Public / Private</strong><br>
+        必ず <strong class="text-danger">Private</strong> (鍵マークの方) を選択してください。<br>
+        <span class="text-danger">※Publicにすると社外に全公開されてしまいます。</span></li>
+        
+        <li class="mt-4"><strong>Create repository</strong><br>
+        画面一番下の緑色のボタン <code>Create repository</code> を押して完了です。</li>
+        
+        <li class="mt-4"><strong>URLのコピー</strong><br>
+        作成後の画面に表示されるURL (例: <code>https://github.com/.../x-auto-post.git</code>) をコピーして、以下に貼り付けてください。<br>
+        <small>※ "Quick setup" という枠の中にあるHTTPSのURLです。</small></li>
       </ol>
 
       <div class="input-group">
@@ -536,15 +600,29 @@
       </div>
 
       <h3>3. 開発用トークンの発行</h3>
-      <p>エンジニアがプログラムをアップロードするために必要な「パスワード代わりの鍵（アクセストークン）」を発行します。</p>
+      <p>エンジニアがプログラムをアップロードするために必要な「パスワード代わりの鍵」を発行します。</p>
       <ol>
-        <li>画面右上のアイコン > <strong>Settings</strong> > 左メニュー最下部の <strong>Developer settings</strong> を開きます。</li>
-        <li><strong>Personal access tokens</strong> > <strong>Tokens (classic)</strong> を選び、<strong>Generate new token (classic)</strong> を押します。</li>
-        <li><strong>Note</strong> に <code>upload-key</code> と入力し、<strong>Expiration</strong>（有効期限）を <strong>No expiration</strong>（無期限）にします。</li>
-        <li><strong>Select scopes</strong> で <strong>repo</strong>（一番上）にチェックを入れます。</li>
-        <li>画面下の <strong>Generate token</strong> を押します。</li>
-        <li><code>ghp_</code> から始まる文字列が表示されるので、コピーして以下に貼り付けてください。<br>
-        <span class="text-danger">※この画面を閉じると二度と表示されないので注意してください。</span></li>
+        <li>画面右上のアイコンをクリックし、<strong>Settings</strong> を選びます。</li>
+        <li>左側のメニューを一番下までスクロールし、<strong>Developer settings</strong> を開きます。</li>
+        <li>左メニューの <strong>Personal access tokens</strong> をクリックし、<strong>Tokens (classic)</strong> を選びます。</li>
+        <li>画面右上の <strong>Generate new token</strong> ボタンを押し、<strong>Generate new token (classic)</strong> を選びます。</li>
+        
+        <li class="mt-4"><strong>Note</strong><br>
+        何のための鍵かわかるように <code>upload-key</code> と入力します。</li>
+        
+        <li class="mt-4"><strong>Expiration (有効期限)</strong><br>
+        「30 days」になっている部分をクリックし、<strong>No expiration</strong> (無期限) に変更します。</li>
+        
+        <li class="mt-4"><strong>Select scopes</strong><br>
+        一番上の <strong>repo</strong> (Full control of private repositories) にチェックを入れます。<br>
+        <small>※これにチェックを入れないと、エンジニアがコードをアップロードできません。</small></li>
+        
+        <li class="mt-4"><strong>Generate token</strong><br>
+        画面一番下の緑色のボタンを押します。</li>
+        
+        <li class="mt-4"><strong>トークンのコピー</strong><br>
+        <code>ghp_</code> から始まる長い文字列が表示されるので、コピーして以下に貼り付けてください。<br>
+        <span class="text-danger">※この画面を閉じると二度と表示されないので、必ず今コピーしてください！</span></li>
       </ol>
 
       <div class="input-group">
@@ -1402,6 +1480,8 @@ Access Token Secret: ...</pre>
     <div class="missing-list" id="missing_list"></div>
   </div>
 
+  <div style="height: 80px;"></div><!-- 余白用 -->
+
   <footer>
     X Auto Post System Setup Guide
   </footer>
@@ -1416,15 +1496,17 @@ function showTab(role) {
   document.getElementById('tab-' + role).classList.add('active');
   // ボタンのアクティブ状態更新
   const btns = document.querySelectorAll('.tab-btn');
+  const sb = document.getElementById('status_bar');
+  
   if(role === 'satchin') {
     btns[0].classList.add('active');
-    document.getElementById('status_bar').classList.add('visible');
+    if(sb) sb.classList.add('visible');
   } else if (role === 'engineer') {
     btns[1].classList.add('active');
-    document.getElementById('status_bar').classList.remove('visible');
+    if(sb) sb.classList.remove('visible');
   } else {
     btns[2].classList.add('active');
-    document.getElementById('status_bar').classList.remove('visible');
+    if(sb) sb.classList.remove('visible');
   }
 }
 
@@ -1433,7 +1515,7 @@ const fields = [
   'ml_address', 'gcp_json', 'bot_email', 'sheet_url', 
   'acc_a_id', 'acc_a_pw', 'acc_b_id', 'acc_b_pw', 'acc_test_id', 'acc_test_pw',
   'x_api_key', 'x_api_secret',
-  'github_pw', 'repo_url', 'github_token',
+  'github_email', 'github_pw', 'repo_url', 'github_token',
   'token_a', 'secret_a', 'token_b', 'secret_b', 'token_test', 'secret_test'
 ];
 
@@ -1464,7 +1546,7 @@ function updateStatus() {
   const requiredIds = [
     'ml_address', 'gcp_json', 'bot_email', 'sheet_url', 
     'acc_a_id', 'acc_a_pw', 'acc_b_id', 'acc_b_pw', 'acc_test_id', 'acc_test_pw',
-    'x_api_key', 'x_api_secret', 'github_pw', 'repo_url', 'github_token'
+    'x_api_key', 'x_api_secret', 'github_email', 'github_pw', 'repo_url', 'github_token'
   ];
   
   let filledCount = 0;
@@ -1472,6 +1554,10 @@ function updateStatus() {
   
   requiredIds.forEach(id => {
     const el = document.getElementById(id);
+    if (!el) {
+        console.warn(`Missing element check: ${id} not found`); // デバッグ用
+        return;
+    }
     const val = el.value.trim();
     const group = el.closest('.input-group');
     
@@ -1480,49 +1566,63 @@ function updateStatus() {
       if(group) group.classList.add('filled');
     } else {
       if(group) group.classList.remove('filled');
-      missing.push(el.getAttribute('data-required') || id);
+      // data-required属性がない場合のフォールバック
+      const label = el.getAttribute('data-required') || id;
+      missing.push(label);
     }
   });
 
   const percent = Math.round((filledCount / requiredIds.length) * 100);
   document.getElementById('status_percent').innerText = percent + '%';
-  document.getElementById('progress_fill').style.width = percent + '%';
+  
+  const fillEl = document.getElementById('progress_fill');
+  if(fillEl) fillEl.style.width = percent + '%';
   
   // キャラクター移動 (0%〜100%)
   const runner = document.getElementById('runner');
   const goal = document.getElementById('goal');
   
-  // うさぎの位置更新
-  runner.style.left = percent + '%';
+  if(runner) runner.style.left = percent + '%';
 
   const msgEl = document.getElementById('status_msg');
   const listEl = document.getElementById('missing_list');
   
   if(percent === 100) {
-    msgEl.innerText = "🎉 すべての入力が完了しました！";
-    msgEl.style.color = "#059669";
-    msgEl.style.fontWeight = "bold";
-    listEl.innerHTML = "";
+    if(msgEl) {
+      msgEl.innerText = "🎉 すべての入力が完了しました！";
+      msgEl.style.color = "#059669";
+      msgEl.style.fontWeight = "bold";
+    }
+    if(listEl) listEl.innerHTML = "";
     
     // ゴール演出
-    goal.innerHTML = "🎉"; 
-    goal.style.animation = "pop 0.6s ease";
+    if(goal) {
+      goal.innerHTML = "🎉"; 
+      goal.style.animation = "pop 0.6s ease";
+    }
     
     // 犬演出 (喜び)
-    runner.innerHTML = "🐶"; // 完了時
-    // 少し左にずらしてゴールと被らないようにするならここを調整
-    runner.style.left = "calc(100% - 25px)"; 
-    runner.style.animation = "bounce 0.3s infinite alternate"; // 早く跳ねる
+    if(runner) {
+      runner.innerHTML = "🐶"; // 完了時
+      runner.style.left = "calc(100% - 25px)"; 
+      runner.style.animation = "bounce 0.3s infinite alternate"; // 早く跳ねる
+    }
   } else {
-    msgEl.innerText = `残り ${missing.length} 項目が未入力です`;
-    msgEl.style.color = "#64748b";
-    listEl.innerHTML = missing.map(m => `<div class="missing-item">${m}</div>`).join('');
+    if(msgEl) {
+      msgEl.innerText = `残り ${missing.length} 項目が未入力です`;
+      msgEl.style.color = "#64748b";
+    }
+    if(listEl) listEl.innerHTML = missing.map(m => `<div class="missing-item">${m}</div>`).join('');
     
     // 通常状態
-    goal.innerHTML = "🎁";
-    goal.style.animation = "none";
-    runner.innerHTML = "🐶"; // 走る
-    runner.style.animation = "bounce 0.5s infinite alternate";
+    if(goal) {
+      goal.innerHTML = "🎁";
+      goal.style.animation = "none";
+    }
+    if(runner) {
+      runner.innerHTML = "🐶"; // 走る
+      runner.style.animation = "bounce 0.5s infinite alternate";
+    }
   }
 }
 
@@ -1533,7 +1633,7 @@ function updateHandoverText() {
   
   txt += `[LOGIN_INFO]\nAccount チャプリ: ${get('acc_a_id')} / ${get('acc_a_pw')}\nAccount ロバミミ: ${get('acc_b_id')} / ${get('acc_b_pw')}\nAccount TEST: ${get('acc_test_id')} / ${get('acc_test_pw')}\n\n`;
   
-  txt += `[GITHUB_INFO]\nPassword: ${get('github_pw')}\nToken: ${get('github_token')}\nRepo URL: ${get('repo_url')}\n\n`;
+  txt += `[GITHUB_INFO]\nEmail: ${get('github_email')}\nPassword: ${get('github_pw')}\nToken: ${get('github_token')}\nRepo URL: ${get('repo_url')}\n\n`;
 
   const saveKeys = ['ml_address', 'gcp_json', 'bot_email', 'sheet_url', 'x_api_key', 'x_api_secret'];
   saveKeys.forEach(k => {
@@ -1581,7 +1681,9 @@ function updateEngineerView() {
     { k: 'X_ACCESS_SECRET_TEST', v: get('secret_test') },
   ];
 
-  const container = document.getElementById('secrets_list_container');
+  const container = document.getElementById('secrets-list');
+  if (!container) return; // エンジニアタブが表示されていない場合は何もしない
+
   container.innerHTML = secrets.map(s => `
     <div class="secret-item">
       <div class="secret-info">
@@ -1625,6 +1727,8 @@ function importHandoverData() {
   // GitHub情報の復元
   const ghInfo = parse('GITHUB_INFO');
   if(ghInfo) {
+    const emailMatch = ghInfo.match(/Email: (.*)/);
+    if(emailMatch) document.getElementById('github_email').value = emailMatch[1];
     const pwMatch = ghInfo.match(/Password: (.*)/);
     if(pwMatch) document.getElementById('github_pw').value = pwMatch[1];
     const tokenMatch = ghInfo.match(/Token: (.*)/);
