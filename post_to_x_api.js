@@ -86,55 +86,29 @@ function getGoogleAuth() {
     throw new Error('Google Service Accountの設定が見つかりません');
 }
 
-// スプレッドシート取得 (CSV経由で軽量化)
+// スプレッドシート取得 (Google Sheets API使用)
 async function getSpreadsheetData() {
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=${SHEET_NAME}`;
     try {
-        const response = await axios.get(csvUrl);
-        return parseCSV(response.data);
+        const auth = getGoogleAuth();
+        const sheets = google.sheets({ version: 'v4', auth });
+        
+        const response = await sheets.spreadsheets.values.get({
+            spreadsheetId: SPREADSHEET_ID,
+            range: `${SHEET_NAME}!A:Z`, // 十分な範囲を取得
+        });
+        
+        return response.data.values || [];
     } catch (e) {
         console.error('Spreadsheet download failed:', e.message);
+        if (e.response) {
+            console.error('API Error:', e.response.data);
+        }
         throw e;
     }
 }
 
-// CSVパーサー
-function parseCSV(csvText) {
-    const rows = [];
-    let currentRow = [];
-    let currentValue = '';
-    let inQuotes = false;
 
-    for (let i = 0; i < csvText.length; i++) {
-        const char = csvText[i];
-        if (char === '"') {
-            if (inQuotes && csvText[i + 1] === '"') {
-                currentValue += '"';
-                i++;
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            currentRow.push(currentValue);
-            currentValue = '';
-        } else if ((char === '\r' || char === '\n') && !inQuotes) {
-            if (char === '\r' && csvText[i + 1] === '\n') i++;
-            currentRow.push(currentValue);
-            if (currentRow.some(v => v)) rows.push(currentRow);
-            currentRow = [];
-            currentValue = '';
-        } else {
-            currentValue += char;
-        }
-    }
-    if (currentValue || currentRow.length) {
-        currentRow.push(currentValue);
-        rows.push(currentRow);
-    }
-    return rows;
-}
-
-// Google Driveから画像ダウンロード
+// Google Driveから画像ダウンロード (Google Drive API使用)
 async function downloadImage(fileIdOrUrl) {
     if (!fileIdOrUrl) return null;
     
@@ -144,15 +118,25 @@ async function downloadImage(fileIdOrUrl) {
     if (match) fileId = match[0];
 
     console.log(`📥 画像ダウンロード: ${fileId}`);
-    const url = `https://drive.google.com/uc?export=download&id=${fileId}`;
     
     try {
-        const response = await axios.get(url, { responseType: 'arraybuffer' });
+        const auth = getGoogleAuth();
+        const drive = google.drive({ version: 'v3', auth });
+        
+        // Google Drive APIでファイルをダウンロード
+        const response = await drive.files.get(
+            { fileId: fileId, alt: 'media' },
+            { responseType: 'arraybuffer' }
+        );
+        
         const tempPath = path.join('/tmp', `${fileId}.jpg`);
-        await writeFile(tempPath, response.data);
+        await writeFile(tempPath, Buffer.from(response.data));
         return tempPath;
     } catch (e) {
         console.error(`❌ 画像ダウンロード失敗: ${e.message}`);
+        if (e.response) {
+            console.error('API Error:', e.response.status, e.response.statusText);
+        }
         return null;
     }
 }
