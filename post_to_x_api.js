@@ -65,44 +65,113 @@ function getGoogleAuth() {
     const serviceAccountKeyPath = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || './service-account-key.json';
     const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
 
+    let credentials = null;
+    let serviceAccountEmail = null;
+
     if (serviceAccountJson) {
         // 環境変数からJSONを直接読み込む（GitHub Actions用）
         try {
-            const credentials = JSON.parse(serviceAccountJson);
-            return new google.auth.GoogleAuth({
-                credentials,
-                scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
-            });
+            credentials = JSON.parse(serviceAccountJson);
+            serviceAccountEmail = credentials.client_email;
+            console.log(`\n🔐 Service Account認証情報:`);
+            console.log(`   Email: ${serviceAccountEmail}`);
+            console.log(`   Project ID: ${credentials.project_id || 'N/A'}`);
+            console.log(`   Type: ${credentials.type || 'N/A'}`);
         } catch (e) {
             throw new Error(`GOOGLE_SERVICE_ACCOUNT_JSONのパースに失敗: ${e.message}`);
         }
     } else if (fs.existsSync(serviceAccountKeyPath)) {
         // ファイルから読み込む（ローカル用）
-        return new google.auth.GoogleAuth({
+        try {
+            const keyFile = JSON.parse(fs.readFileSync(serviceAccountKeyPath, 'utf8'));
+            serviceAccountEmail = keyFile.client_email;
+            console.log(`\n🔐 Service Account認証情報 (ファイルから):`);
+            console.log(`   Email: ${serviceAccountEmail}`);
+            console.log(`   Project ID: ${keyFile.project_id || 'N/A'}`);
+        } catch (e) {
+            console.error(`⚠️ キーファイルの読み込みエラー: ${e.message}`);
+        }
+    } else {
+        throw new Error('Google Service Accountの設定が見つかりません');
+    }
+
+    const auth = credentials 
+        ? new google.auth.GoogleAuth({
+            credentials,
+            scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
+        })
+        : new google.auth.GoogleAuth({
             keyFile: serviceAccountKeyPath,
             scopes: ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive.readonly']
         });
-    }
-    throw new Error('Google Service Accountの設定が見つかりません');
+
+    // Service Accountのメールアドレスを返すためにauthオブジェクトに追加
+    auth.serviceAccountEmail = serviceAccountEmail;
+    
+    return auth;
 }
 
 // スプレッドシート取得 (Google Sheets API使用)
 async function getSpreadsheetData() {
     try {
-        const auth = getGoogleAuth();
-        const sheets = google.sheets({ version: 'v4', auth });
+        console.log(`\n📊 スプレッドシート取得開始:`);
+        console.log(`   Spreadsheet ID: ${SPREADSHEET_ID}`);
+        console.log(`   Sheet Name: ${SHEET_NAME}`);
         
+        const auth = getGoogleAuth();
+        const serviceAccountEmail = auth.serviceAccountEmail;
+        
+        if (serviceAccountEmail) {
+            console.log(`   Service Account: ${serviceAccountEmail}`);
+            console.log(`   ⚠️ このメールアドレスがスプレッドシートに共有されているか確認してください！`);
+        }
+        
+        // 認証情報を取得
+        const authClient = await auth.getClient();
+        console.log(`   ✅ 認証成功`);
+        
+        const sheets = google.sheets({ version: 'v4', auth: authClient });
+        
+        console.log(`   📥 データ取得中...`);
         const response = await sheets.spreadsheets.values.get({
             spreadsheetId: SPREADSHEET_ID,
             range: `${SHEET_NAME}!A:Z`, // 十分な範囲を取得
         });
         
-        return response.data.values || [];
+        const rows = response.data.values || [];
+        console.log(`   ✅ 取得成功: ${rows.length}行`);
+        
+        return rows;
     } catch (e) {
-        console.error('Spreadsheet download failed:', e.message);
+        console.error('\n❌ スプレッドシート取得失敗:');
+        console.error(`   Error: ${e.message}`);
+        console.error(`   Code: ${e.code || 'N/A'}`);
+        
         if (e.response) {
-            console.error('API Error:', e.response.data);
+            console.error(`   Status: ${e.response.status}`);
+            console.error(`   Status Text: ${e.response.statusText}`);
+            if (e.response.data) {
+                console.error(`   API Error Details:`, JSON.stringify(e.response.data, null, 2));
+            }
         }
+        
+        // 権限エラーの場合の詳細な説明
+        if (e.code === 403 || (e.response && e.response.status === 403)) {
+            console.error('\n🔍 権限エラーの原因として考えられること:');
+            console.error('   1. Service Accountのメールアドレスがスプレッドシートに共有されていない');
+            console.error('   2. スプレッドシートの共有設定が「閲覧者」のみになっている（「編集者」が必要）');
+            console.error('   3. Service AccountがMLのメンバーになっていない');
+            console.error('   4. Google Sheets APIが有効化されていない');
+            
+            const auth = getGoogleAuth();
+            if (auth.serviceAccountEmail) {
+                console.error(`\n💡 解決方法:`);
+                console.error(`   スプレッドシートを開き、「共有」ボタンから以下のメールアドレスを追加してください:`);
+                console.error(`   ${auth.serviceAccountEmail}`);
+                console.error(`   権限は「編集者」を選択してください。`);
+            }
+        }
+        
         throw e;
     }
 }
@@ -117,13 +186,38 @@ async function downloadImage(fileIdOrUrl) {
     const match = fileIdOrUrl.match(/[-\w]{25,}/);
     if (match) fileId = match[0];
 
-    console.log(`📥 画像ダウンロード: ${fileId}`);
+    console.log(`\n📥 画像ダウンロード開始:`);
+    console.log(`   File ID: ${fileId}`);
+    console.log(`   Original URL/ID: ${fileIdOrUrl.substring(0, 50)}...`);
     
     try {
         const auth = getGoogleAuth();
-        const drive = google.drive({ version: 'v3', auth });
+        const serviceAccountEmail = auth.serviceAccountEmail;
+        
+        if (serviceAccountEmail) {
+            console.log(`   Service Account: ${serviceAccountEmail}`);
+        }
+        
+        const authClient = await auth.getClient();
+        const drive = google.drive({ version: 'v3', auth: authClient });
+        
+        // まずファイル情報を取得して確認
+        try {
+            const fileInfo = await drive.files.get({
+                fileId: fileId,
+                fields: 'id,name,mimeType,permissions'
+            });
+            console.log(`   ✅ ファイル情報取得成功: ${fileInfo.data.name || 'N/A'}`);
+            console.log(`   MIME Type: ${fileInfo.data.mimeType || 'N/A'}`);
+        } catch (infoError) {
+            console.error(`   ⚠️ ファイル情報取得失敗: ${infoError.message}`);
+            if (infoError.code === 403 || (infoError.response && infoError.response.status === 403)) {
+                console.error(`   💡 このファイルがService Accountに共有されているか確認してください`);
+            }
+        }
         
         // Google Drive APIでファイルをダウンロード
+        console.log(`   📥 ダウンロード中...`);
         const response = await drive.files.get(
             { fileId: fileId, alt: 'media' },
             { responseType: 'arraybuffer' }
@@ -131,12 +225,37 @@ async function downloadImage(fileIdOrUrl) {
         
         const tempPath = path.join('/tmp', `${fileId}.jpg`);
         await writeFile(tempPath, Buffer.from(response.data));
+        console.log(`   ✅ ダウンロード完了: ${tempPath}`);
         return tempPath;
     } catch (e) {
-        console.error(`❌ 画像ダウンロード失敗: ${e.message}`);
+        console.error(`\n❌ 画像ダウンロード失敗:`);
+        console.error(`   Error: ${e.message}`);
+        console.error(`   Code: ${e.code || 'N/A'}`);
+        
         if (e.response) {
-            console.error('API Error:', e.response.status, e.response.statusText);
+            console.error(`   Status: ${e.response.status}`);
+            console.error(`   Status Text: ${e.response.statusText}`);
+            if (e.response.data) {
+                console.error(`   API Error Details:`, JSON.stringify(e.response.data, null, 2));
+            }
         }
+        
+        // 権限エラーの場合の詳細な説明
+        if (e.code === 403 || (e.response && e.response.status === 403)) {
+            console.error('\n🔍 権限エラーの原因として考えられること:');
+            console.error('   1. Service Accountのメールアドレスが画像ファイルに共有されていない');
+            console.error('   2. Google Drive APIが有効化されていない');
+            console.error('   3. Service AccountがMLのメンバーになっていない');
+            
+            const auth = getGoogleAuth();
+            if (auth.serviceAccountEmail) {
+                console.error(`\n💡 解決方法:`);
+                console.error(`   画像ファイルを開き、「共有」ボタンから以下のメールアドレスを追加してください:`);
+                console.error(`   ${auth.serviceAccountEmail}`);
+                console.error(`   権限は「閲覧者」以上を選択してください。`);
+            }
+        }
+        
         return null;
     }
 }
