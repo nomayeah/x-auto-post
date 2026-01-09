@@ -253,14 +253,15 @@ async function downloadImages(imageUrls) {
     if (!imageUrls) return [];
     
     console.log(`\n🔍 画像URL解析開始:`);
-    console.log(`   元の値: ${imageUrls.substring(0, 200)}${imageUrls.length > 200 ? '...' : ''}`);
+    console.log(`   元の値（最初の200文字）: ${imageUrls.substring(0, 200)}${imageUrls.length > 200 ? '...' : ''}`);
     console.log(`   文字数: ${imageUrls.length}`);
+    console.log(`   改行文字の確認: \\n=${imageUrls.includes('\n')}, \\r\\n=${imageUrls.includes('\r\n')}, カンマ=${imageUrls.includes(',')}`);
     
-    // 改行またはカンマで分割
+    // 改行またはカンマで分割（\r\n, \n, \r, カンマのすべてに対応）
     const urls = imageUrls
-        .split(/[\n,]/)
+        .split(/\r\n|\n|\r|,/)
         .map(url => url.trim())
-        .filter(url => url.length > 0);
+        .filter(url => url.length > 0 && url.toLowerCase() !== 'null' && url.toLowerCase() !== 'undefined');
     
     console.log(`   分割後: ${urls.length}個のURL`);
     urls.forEach((url, idx) => {
@@ -549,7 +550,14 @@ async function main() {
 
         if (shouldPost) {
             console.log(`\n🎯 対象行: ${i + 1} (Account: ${targetAccount})`);
-            console.log(`   画像列の値: ${image ? image.substring(0, 100) + '...' : '(空)'}`);
+            console.log(`   画像列の値（最初の200文字）: ${image ? image.substring(0, 200) + (image.length > 200 ? '...' : '') : '(空)'}`);
+            console.log(`   画像列の値（全長）: ${image ? image.length + '文字' : '0文字'}`);
+            if (image) {
+                console.log(`   改行文字の確認:`);
+                console.log(`     \\n: ${image.includes('\n') ? 'あり' : 'なし'}`);
+                console.log(`     \\r\\n: ${image.includes('\r\n') ? 'あり' : 'なし'}`);
+                console.log(`     カンマ: ${image.includes(',') ? 'あり' : 'なし'}`);
+            }
             
             let imagePaths = [];
             try {
