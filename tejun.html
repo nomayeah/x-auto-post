@@ -1457,6 +1457,24 @@ Access Token Secret: ...</pre>
         <p>時間が過ぎても「完了」にならない場合、何らかのエラーが発生しています。<br>
         エンジニアに連絡し、GitHubのログを確認してもらってください。</p>
       </details>
+
+      <details style="margin-top:12px;">
+        <summary style="font-weight:bold; cursor:pointer;">Q. Botを一時的に停止したい</summary>
+        <p><strong>【方法1】スプレッドシートで停止（推奨）</strong></p>
+        <ol>
+          <li>スプレッドシートに「設定」という名前のシートを作成します（まだない場合）</li>
+          <li>「設定」シートのA1セルに <strong class="text-danger">停止</strong> と入力します</li>
+          <li>Botは次回の実行時（30分以内）に停止します</li>
+          <li>再開するには、A1セルの値を削除するか、<strong class="text-success">実行中</strong> に変更してください</li>
+        </ol>
+        <p><strong>【方法2】GitHub Actionsで停止</strong></p>
+        <ol>
+          <li>GitHubリポジトリの <strong>Settings</strong> > <strong>Actions</strong> > <strong>General</strong> を開きます</li>
+          <li><strong>Disable Actions</strong> を選択して保存します</li>
+          <li>再開するには、同じ設定で <strong>Enable Actions</strong> に戻します</li>
+        </ol>
+        <p class="note">※ 方法1の方が簡単で、すぐに反映されます。方法2は完全に停止しますが、再開時に設定が必要です。</p>
+      </details>
     </div>
 
   </div><!-- End operation tab -->

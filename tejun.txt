@@ -1,6 +1,6 @@
 /**
  * X APIを使用した自動投稿スクリプト
- *
+ * 
  * 機能:
  * 1. スプレッドシートから投稿データを取得
  * 2. アカウント（A/B/Test）を切り替えて投稿
@@ -21,8 +21,6 @@ const unlink = promisify(fs.unlink);
 // === 設定 ===
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1O9pWwkMvVBQOngRSLumogXFktAHmAmur65t5Kwpxe4Y';
 const SHEET_NAME = 'posts';
-const CONTROL_SHEET_NAME = process.env.CONTROL_SHEET_NAME || '設定'; // Bot停止フラグ用シート
-const CONTROL_CELL = 'A1'; // 停止フラグのセル位置
 
 // === 認証情報 ===
 // 共通のAPI Key
@@ -111,48 +109,6 @@ function getGoogleAuth() {
     auth.serviceAccountEmail = serviceAccountEmail;
     
     return auth;
-}
-
-// Bot停止フラグをチェック
-async function checkBotEnabled() {
-    try {
-        const auth = getGoogleAuth();
-        const authClient = await auth.getClient();
-        const sheets = google.sheets({ version: 'v4', auth: authClient });
-        
-        // 設定シートから停止フラグを取得
-        try {
-            const response = await sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: `${CONTROL_SHEET_NAME}!${CONTROL_CELL}`,
-            });
-            
-            const value = response.data.values?.[0]?.[0] || '';
-            const isStopped = value.toString().trim().toLowerCase() === '停止' || 
-                            value.toString().trim().toLowerCase() === 'stop' ||
-                            value.toString().trim().toLowerCase() === 'false';
-            
-            if (isStopped) {
-                console.log(`\n⏸️  Bot停止フラグが検出されました: ${value}`);
-                console.log(`   スプレッドシートの「${CONTROL_SHEET_NAME}」シートの「${CONTROL_CELL}」セルに「停止」と書かれています。`);
-                console.log(`   実行をスキップします。再開するには、セルの値を削除するか「実行中」に変更してください。`);
-                return false;
-            }
-            
-            return true;
-        } catch (e) {
-            // 設定シートが存在しない場合は、停止フラグなしとして扱う
-            if (e.code === 400 || (e.response && e.response.status === 400)) {
-                console.log(`\nℹ️  設定シート「${CONTROL_SHEET_NAME}」が見つかりません。通常通り実行します。`);
-                return true;
-            }
-            throw e;
-        }
-    } catch (e) {
-        console.error(`\n⚠️  停止フラグチェック中にエラー: ${e.message}`);
-        console.error(`   エラーを無視して実行を続けます。`);
-        return true; // エラー時は実行を続ける
-    }
 }
 
 // スプレッドシート取得 (Google Sheets API使用)
@@ -393,15 +349,6 @@ async function main() {
     console.log(`🚀 開始: モード=${mode}`);
     
     checkEnvVars(); // 最初にチェック
-
-    // 0. Bot停止フラグをチェック（testモードではスキップ）
-    if (mode === 'check') {
-        const isEnabled = await checkBotEnabled();
-        if (!isEnabled) {
-            console.log('🏁 Bot停止中。実行を終了します。');
-            return;
-        }
-    }
 
     // 1. データ取得
     const rows = await getSpreadsheetData();

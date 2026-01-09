@@ -1,0 +1,34 @@
+name: Stop Bot
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: '停止を確認するには「停止」と入力してください'
+        required: true
+        default: ''
+
+jobs:
+  stop:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == '停止'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Stop Bot by disabling workflow
+        run: |
+          echo "⚠️ Bot停止機能"
+          echo ""
+          echo "このワークフローは、スプレッドシートベースの停止機能を使用することを推奨します。"
+          echo ""
+          echo "【推奨方法】スプレッドシートで停止:"
+          echo "1. スプレッドシートに「設定」という名前のシートを作成"
+          echo "2. A1セルに「停止」と入力"
+          echo "3. Botは自動的に実行をスキップします"
+          echo ""
+          echo "【このワークフローでの停止方法】:"
+          echo "このワークフローでは直接停止できません。"
+          echo "スプレッドシートの停止機能を使用するか、"
+          echo "リポジトリの Settings > Actions > General でActionsを無効化してください。"
+

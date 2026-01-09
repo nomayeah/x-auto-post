@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node post_to_x_api.js check",
     "test-post": "node post_to_x_api.js test",
-    "get-tokens": "node get_twitter_tokens.js"
+    "get-tokens": "node get_twitter_tokens.js",
+    "check-permissions": "node check_permissions.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
