@@ -365,27 +365,80 @@ async function postTweet(accountKey, text, imagePath, imagePaths) {
             // 複数画像を並列でアップロード
             const uploadPromises = paths.map(async (path, index) => {
                 try {
-                    console.log(`   [${index + 1}/${paths.length}] アップロード中: ${path}`);
+                    console.log(`   [${index + 1}/${paths.length}] アップロード中: ${path.substring(path.length - 30)}`);
                     const mediaId = await client.v1.uploadMedia(path);
-                    console.log(`   ✅ [${index + 1}/${paths.length}] アップロード完了: ${mediaId}`);
+                    console.log(`   ✅ [${index + 1}/${paths.length}] アップロード完了: Media ID ${mediaId}`);
                     return mediaId;
                 } catch (e) {
-                    console.error(`   ❌ [${index + 1}/${paths.length}] アップロード失敗: ${e.message}`);
+                    console.error(`   ❌ [${index + 1}/${paths.length}] アップロード失敗:`);
+                    console.error(`      Error: ${e.message}`);
+                    console.error(`      Code: ${e.code || 'N/A'}`);
+                    if (e.response) {
+                        console.error(`      Status: ${e.response.status}`);
+                        if (e.response.data) {
+                            console.error(`      Response: ${JSON.stringify(e.response.data)}`);
+                        }
+                    }
                     throw e;
                 }
             });
             
-            mediaIds = await Promise.all(uploadPromises);
-            console.log(`✅ 全画像のアップロード完了: ${mediaIds.length}枚`);
+            try {
+                mediaIds = await Promise.all(uploadPromises);
+                console.log(`✅ 全画像のアップロード完了: ${mediaIds.length}枚`);
+                console.log(`   Media IDs: ${mediaIds.join(', ')}`);
+            } catch (uploadError) {
+                console.error(`\n❌ 画像アップロード中にエラーが発生しました`);
+                throw uploadError;
+            }
         }
 
         console.log(`📝 投稿中 (@${accountKey}): ${text.substring(0, 20)}...`);
+        console.log(`   テキスト長: ${text.length}文字`);
+        console.log(`   画像数: ${mediaIds.length}枚`);
+        if (mediaIds.length > 0) {
+            console.log(`   Media IDs: [${mediaIds.join(', ')}]`);
+        }
         
         // v2 API for tweet（複数画像対応）
-        await client.v2.tweet({
+        const tweetParams = {
             text: text,
             media: mediaIds.length > 0 ? { media_ids: mediaIds } : undefined
-        });
+        };
+        console.log(`   投稿パラメータ:`, JSON.stringify({
+            text: text.substring(0, 50) + '...',
+            media: tweetParams.media
+        }, null, 2));
+        
+        try {
+            const result = await client.v2.tweet(tweetParams);
+            console.log(`✅ 投稿成功: Tweet ID ${result.data?.id || 'N/A'}`);
+        } catch (tweetError) {
+            console.error(`\n❌ 投稿APIエラー:`);
+            console.error(`   Message: ${tweetError.message}`);
+            console.error(`   Code: ${tweetError.code || 'N/A'}`);
+            if (tweetError.data) {
+                console.error(`   Data:`, JSON.stringify(tweetError.data, null, 2));
+            }
+            if (tweetError.response) {
+                console.error(`   Status: ${tweetError.response.status}`);
+                console.error(`   Status Text: ${tweetError.response.statusText}`);
+            }
+            
+            // 403エラーの場合の詳細な説明
+            if (tweetError.code === 403 || (tweetError.response && tweetError.response.status === 403)) {
+                console.error(`\n🔍 403エラー（権限エラー）の原因として考えられること:`);
+                console.error(`   1. X APIのアプリ設定で「Read and write」権限が設定されていない`);
+                console.error(`   2. 複数画像（${mediaIds.length}枚）の投稿に必要な権限が不足している可能性`);
+                console.error(`   3. Access Tokenが正しくない、または期限切れ`);
+                console.error(`\n💡 解決方法:`);
+                console.error(`   - Developer Portalでアプリ設定を確認`);
+                console.error(`   - 「App permissions」が「Read and write」になっているか確認`);
+                console.error(`   - 必要に応じてAccess Tokenを再取得`);
+            }
+            
+            throw tweetError;
+        }
     } catch (e) {
         console.error(`❌ APIエラー詳細:`);
         console.error(`   Message: ${e.message}`);
@@ -484,18 +537,22 @@ async function main() {
 
         if (shouldPost) {
             console.log(`\n🎯 対象行: ${i + 1} (Account: ${targetAccount})`);
+            console.log(`   画像列の値: ${image ? image.substring(0, 100) + '...' : '(空)'}`);
             
             let imagePaths = [];
             try {
                 // 画像DL（複数画像対応）
                 if (image) {
+                    console.log(`\n🔍 画像処理開始: ${image.length}文字`);
                     imagePaths = await downloadImages(image);
+                    console.log(`   ダウンロード完了: ${imagePaths.length}枚`);
                     if (imagePaths.length === 0 && image.trim()) {
                         console.warn(`⚠️  画像のダウンロードに失敗しましたが、テキストのみで投稿を続行します。`);
                     }
                 }
 
                 // 投稿（複数画像対応）
+                console.log(`\n📤 投稿準備: 画像${imagePaths.length}枚`);
                 await postTweet(targetAccount, text, null, imagePaths);
                 console.log('✅ 投稿成功');
 
