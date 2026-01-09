@@ -1405,7 +1405,17 @@ Access Token Secret: ...</pre>
             <li><strong>日付/時間</strong>: 投稿したい日時 (例: 2024/05/01 18:00)</li>
             <li><strong>アカウント</strong>: チャプリ or ロバミミ</li>
             <li><strong>テキスト</strong>: 投稿本文</li>
-            <li><strong>画像</strong>: Step 1でコピーしたURL</li>
+            <li><strong>画像</strong>: Step 1でコピーしたURL
+              <ul style="margin-top:8px;">
+                <li>1枚の場合: URLをそのまま入力</li>
+                <li>複数枚の場合（最大4枚）: URLを改行またはカンマ（,）で区切って入力<br>
+                <small>例:<br>
+                <code>https://drive.google.com/file/d/xxx1/view</code><br>
+                <code>https://drive.google.com/file/d/xxx2/view</code><br>
+                または<br>
+                <code>https://drive.google.com/file/d/xxx1/view, https://drive.google.com/file/d/xxx2/view</code></small></li>
+              </ul>
+            </li>
             <li><strong>ステータス</strong>: <strong class="text-warn">確認待ち</strong> を選択</li>
           </ul>
         </div>
@@ -1450,6 +1460,20 @@ Access Token Secret: ...</pre>
       <details style="margin-top:12px;">
         <summary style="font-weight:bold; cursor:pointer;">Q. 画像なしで投稿したい</summary>
         <p>「画像」列を空欄にすれば、テキストのみで投稿されます。</p>
+      </details>
+
+      <details style="margin-top:12px;">
+        <summary style="font-weight:bold; cursor:pointer;">Q. 複数の画像を投稿したい（最大4枚）</summary>
+        <p>「画像」列に、複数のGoogle Drive URLを入力してください。</p>
+        <ul>
+          <li><strong>改行区切り</strong>: URLを改行で区切って入力（推奨）<br>
+          <small>例:<br>
+          <code>https://drive.google.com/file/d/xxx1/view</code><br>
+          <code>https://drive.google.com/file/d/xxx2/view</code></small></li>
+          <li><strong>カンマ区切り</strong>: URLをカンマ（,）で区切って入力<br>
+          <small>例: <code>https://drive.google.com/file/d/xxx1/view, https://drive.google.com/file/d/xxx2/view</code></small></li>
+        </ul>
+        <p class="note">※ X APIの制限により、最大4枚まで対応しています。5枚以上入力した場合、最初の4枚が使用されます。</p>
       </details>
 
       <details style="margin-top:12px;">

@@ -242,86 +242,79 @@ async function getSpreadsheetData() {
 
 
 // Google Driveから画像ダウンロード (Google Drive API使用)
+// 単一画像用（後方互換性のため残す）
 async function downloadImage(fileIdOrUrl) {
-    if (!fileIdOrUrl) return null;
-    
-    // ID抽出
-    let fileId = fileIdOrUrl;
-    const match = fileIdOrUrl.match(/[-\w]{25,}/);
-    if (match) fileId = match[0];
+    const results = await downloadImages(fileIdOrUrl);
+    return results && results.length > 0 ? results[0] : null;
+}
 
-    console.log(`\n📥 画像ダウンロード開始:`);
-    console.log(`   File ID: ${fileId}`);
-    console.log(`   Original URL/ID: ${fileIdOrUrl.substring(0, 50)}...`);
+// 複数画像ダウンロード対応（改行またはカンマ区切り）
+async function downloadImages(imageUrls) {
+    if (!imageUrls) return [];
     
-    try {
-        const auth = getGoogleAuth();
-        const serviceAccountEmail = auth.serviceAccountEmail;
-        
-        if (serviceAccountEmail) {
-            console.log(`   Service Account: ${serviceAccountEmail}`);
-        }
-        
-        const authClient = await auth.getClient();
-        const drive = google.drive({ version: 'v3', auth: authClient });
-        
-        // まずファイル情報を取得して確認
-        try {
-            const fileInfo = await drive.files.get({
-                fileId: fileId,
-                fields: 'id,name,mimeType,permissions'
-            });
-            console.log(`   ✅ ファイル情報取得成功: ${fileInfo.data.name || 'N/A'}`);
-            console.log(`   MIME Type: ${fileInfo.data.mimeType || 'N/A'}`);
-        } catch (infoError) {
-            console.error(`   ⚠️ ファイル情報取得失敗: ${infoError.message}`);
-            if (infoError.code === 403 || (infoError.response && infoError.response.status === 403)) {
-                console.error(`   💡 このファイルがService Accountに共有されているか確認してください`);
-            }
-        }
-        
-        // Google Drive APIでファイルをダウンロード
-        console.log(`   📥 ダウンロード中...`);
-        const response = await drive.files.get(
-            { fileId: fileId, alt: 'media' },
-            { responseType: 'arraybuffer' }
-        );
-        
-        const tempPath = path.join('/tmp', `${fileId}.jpg`);
-        await writeFile(tempPath, Buffer.from(response.data));
-        console.log(`   ✅ ダウンロード完了: ${tempPath}`);
-        return tempPath;
-    } catch (e) {
-        console.error(`\n❌ 画像ダウンロード失敗:`);
-        console.error(`   Error: ${e.message}`);
-        console.error(`   Code: ${e.code || 'N/A'}`);
-        
-        if (e.response) {
-            console.error(`   Status: ${e.response.status}`);
-            console.error(`   Status Text: ${e.response.statusText}`);
-            if (e.response.data) {
-                console.error(`   API Error Details:`, JSON.stringify(e.response.data, null, 2));
-            }
-        }
-        
-        // 権限エラーの場合の詳細な説明
-        if (e.code === 403 || (e.response && e.response.status === 403)) {
-            console.error('\n🔍 権限エラーの原因として考えられること:');
-            console.error('   1. Service Accountのメールアドレスが画像ファイルに共有されていない');
-            console.error('   2. Google Drive APIが有効化されていない');
-            console.error('   3. Service AccountがMLのメンバーになっていない');
-            
-            const auth = getGoogleAuth();
-            if (auth.serviceAccountEmail) {
-                console.error(`\n💡 解決方法:`);
-                console.error(`   画像ファイルを開き、「共有」ボタンから以下のメールアドレスを追加してください:`);
-                console.error(`   ${auth.serviceAccountEmail}`);
-                console.error(`   権限は「閲覧者」以上を選択してください。`);
-            }
-        }
-        
-        return null;
+    // 改行またはカンマで分割
+    const urls = imageUrls
+        .split(/[\n,]/)
+        .map(url => url.trim())
+        .filter(url => url.length > 0);
+    
+    if (urls.length === 0) return [];
+    
+    // 最大4枚まで（X APIの制限）
+    const maxImages = 4;
+    const urlsToProcess = urls.slice(0, maxImages);
+    
+    if (urls.length > maxImages) {
+        console.log(`⚠️  画像が${urls.length}枚ありますが、最大${maxImages}枚まで対応しています。最初の${maxImages}枚を使用します。`);
     }
+    
+    console.log(`\n📥 画像ダウンロード開始: ${urlsToProcess.length}枚`);
+    
+    const downloadPromises = urlsToProcess.map(async (fileIdOrUrl, index) => {
+        // ID抽出
+        let fileId = fileIdOrUrl;
+        const match = fileIdOrUrl.match(/[-\w]{25,}/);
+        if (match) fileId = match[0];
+
+        console.log(`   [${index + 1}/${urlsToProcess.length}] File ID: ${fileId}`);
+        
+        try {
+            const auth = getGoogleAuth();
+            const authClient = await auth.getClient();
+            const drive = google.drive({ version: 'v3', auth: authClient });
+            
+            // Google Drive APIでファイルをダウンロード
+            const response = await drive.files.get(
+                { fileId: fileId, alt: 'media' },
+                { responseType: 'arraybuffer' }
+            );
+            
+            const tempPath = path.join('/tmp', `${fileId}_${index}.jpg`);
+            await writeFile(tempPath, Buffer.from(response.data));
+            console.log(`   ✅ [${index + 1}/${urlsToProcess.length}] ダウンロード完了: ${tempPath}`);
+            return tempPath;
+        } catch (e) {
+            console.error(`   ❌ [${index + 1}/${urlsToProcess.length}] ダウンロード失敗: ${e.message}`);
+            
+            // 権限エラーの場合の詳細な説明
+            if (e.code === 403 || (e.response && e.response.status === 403)) {
+                const auth = getGoogleAuth();
+                if (auth.serviceAccountEmail) {
+                    console.error(`   💡 このファイルがService Accountに共有されているか確認してください:`);
+                    console.error(`      ${auth.serviceAccountEmail}`);
+                }
+            }
+            
+            return null;
+        }
+    });
+    
+    const results = await Promise.all(downloadPromises);
+    const successful = results.filter(r => r !== null);
+    
+    console.log(`   ✅ 合計 ${successful.length}/${urlsToProcess.length} 枚のダウンロードが完了しました`);
+    
+    return successful;
 }
 
 // スプレッドシート更新
@@ -347,7 +340,9 @@ async function updateSheetStatus(rowIndex, statusColumnIndex, newStatus) {
 }
 
 // Xに投稿
-async function postTweet(accountKey, text, imagePath) {
+// imagePath: 単一画像パス（後方互換性のため）
+// imagePaths: 複数画像パスの配列
+async function postTweet(accountKey, text, imagePath, imagePaths) {
     const token = TOKENS[accountKey];
     if (!token || !token.token) throw new Error(`アカウント設定が見つかりません: ${accountKey}`);
 
@@ -360,19 +355,36 @@ async function postTweet(accountKey, text, imagePath) {
             accessSecret: token.secret,
         });
 
-        let mediaId = undefined;
-        if (imagePath) {
-            console.log('📤 画像アップロード中...');
-            // v1 API for media upload
-            mediaId = await client.v1.uploadMedia(imagePath);
+        // 画像パスの配列を準備（複数画像対応）
+        const paths = imagePaths || (imagePath ? [imagePath] : []);
+        
+        let mediaIds = [];
+        if (paths.length > 0) {
+            console.log(`📤 画像アップロード中... (${paths.length}枚)`);
+            
+            // 複数画像を並列でアップロード
+            const uploadPromises = paths.map(async (path, index) => {
+                try {
+                    console.log(`   [${index + 1}/${paths.length}] アップロード中: ${path}`);
+                    const mediaId = await client.v1.uploadMedia(path);
+                    console.log(`   ✅ [${index + 1}/${paths.length}] アップロード完了: ${mediaId}`);
+                    return mediaId;
+                } catch (e) {
+                    console.error(`   ❌ [${index + 1}/${paths.length}] アップロード失敗: ${e.message}`);
+                    throw e;
+                }
+            });
+            
+            mediaIds = await Promise.all(uploadPromises);
+            console.log(`✅ 全画像のアップロード完了: ${mediaIds.length}枚`);
         }
 
         console.log(`📝 投稿中 (@${accountKey}): ${text.substring(0, 20)}...`);
         
-        // v2 API for tweet
+        // v2 API for tweet（複数画像対応）
         await client.v2.tweet({
             text: text,
-            media: mediaId ? { media_ids: [mediaId] } : undefined
+            media: mediaIds.length > 0 ? { media_ids: mediaIds } : undefined
         });
     } catch (e) {
         console.error(`❌ APIエラー詳細:`);
@@ -473,26 +485,35 @@ async function main() {
         if (shouldPost) {
             console.log(`\n🎯 対象行: ${i + 1} (Account: ${targetAccount})`);
             
+            let imagePaths = [];
             try {
-                // 画像DL
-                let imagePath = null;
+                // 画像DL（複数画像対応）
                 if (image) {
-                    imagePath = await downloadImage(image);
+                    imagePaths = await downloadImages(image);
+                    if (imagePaths.length === 0 && image.trim()) {
+                        console.warn(`⚠️  画像のダウンロードに失敗しましたが、テキストのみで投稿を続行します。`);
+                    }
                 }
 
-                // 投稿
-                await postTweet(targetAccount, text, imagePath);
+                // 投稿（複数画像対応）
+                await postTweet(targetAccount, text, null, imagePaths);
                 console.log('✅ 投稿成功');
 
                 // ステータス更新
                 await updateSheetStatus(i, colMap.status, newStatus);
 
-                // 後始末
-                if (imagePath) await unlink(imagePath);
-
             } catch (e) {
                 console.error(`❌ 処理失敗: ${e.message}`);
                 // エラーをシートに書き込む？
+            } finally {
+                // 後始末（ダウンロードした画像ファイルを削除）
+                for (const imagePath of imagePaths) {
+                    try {
+                        await unlink(imagePath);
+                    } catch (e) {
+                        console.warn(`⚠️  一時ファイル削除失敗: ${imagePath} - ${e.message}`);
+                    }
+                }
             }
         }
     }
