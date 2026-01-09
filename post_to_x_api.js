@@ -252,13 +252,25 @@ async function downloadImage(fileIdOrUrl) {
 async function downloadImages(imageUrls) {
     if (!imageUrls) return [];
     
+    console.log(`\n🔍 画像URL解析開始:`);
+    console.log(`   元の値: ${imageUrls.substring(0, 200)}${imageUrls.length > 200 ? '...' : ''}`);
+    console.log(`   文字数: ${imageUrls.length}`);
+    
     // 改行またはカンマで分割
     const urls = imageUrls
         .split(/[\n,]/)
         .map(url => url.trim())
         .filter(url => url.length > 0);
     
-    if (urls.length === 0) return [];
+    console.log(`   分割後: ${urls.length}個のURL`);
+    urls.forEach((url, idx) => {
+        console.log(`     [${idx + 1}] ${url.substring(0, 80)}${url.length > 80 ? '...' : ''}`);
+    });
+    
+    if (urls.length === 0) {
+        console.log(`   ⚠️  URLが見つかりませんでした`);
+        return [];
+    }
     
     // 最大4枚まで（X APIの制限）
     const maxImages = 4;
